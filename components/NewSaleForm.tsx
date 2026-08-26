@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { keccak256 } from "js-sha3";
+import QRCode from "qrcode";
 import { useProgram } from "@/lib/useProgram";
 
 function computeAmountBand(amountMinor: number, minPurchase: number): number {
@@ -25,17 +26,16 @@ export function NewSaleForm({
   const [amountPkr, setAmountPkr] = useState(1000);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastSecret, setLastSecret] = useState<string | null>(null);
+  const [secretHex, setSecretHex] = useState<string | null>(null);
+  const [qrImage, setQrImage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
-    console.log("Submit clicked. program:", program, "wallet:", wallet);
     if (!program || !wallet) return;
 
     const amountMinor = amountPkr * 100;
     const band = computeAmountBand(amountMinor, minPurchaseMinor);
-    console.log("band:", band);
 
     if (band === 0) {
       setError("This amount is below the minimum purchase.");
@@ -44,25 +44,23 @@ export function NewSaleForm({
 
     setSubmitting(true);
     setError(null);
+    setSecretHex(null);
+    setQrImage(null);
+    setCopied(false);
 
     try {
       const secretBytes = crypto.getRandomValues(new Uint8Array(32));
       const secretHashBytes = keccak256.array(secretBytes);
-      console.log("secret made, hash:", secretHashBytes);
 
       const [businessPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("business"), wallet.publicKey.toBuffer()],
         program.programId
       );
-      console.log("businessPda:", businessPda.toBase58());
 
       const [receiptPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("receipt"), businessPda.toBuffer(), Buffer.from(secretHashBytes)],
         program.programId
       );
-      console.log("receiptPda:", receiptPda.toBase58());
-
-      console.log("about to call .rpc() -- watch for a Phantom popup now");
 
       await program.methods
         .issueReceipt(secretHashBytes, band)
@@ -74,19 +72,25 @@ export function NewSaleForm({
         })
         .rpc();
 
-      console.log("rpc() finished successfully");
-
-      const secretHex = Array.from(secretBytes)
+      const hex = Array.from(secretBytes)
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
-      setLastSecret(secretHex);
+
+      const qrDataUrl = await QRCode.toDataURL(hex);
+
+      setSecretHex(hex);
+      setQrImage(qrDataUrl);
     } catch (err) {
-      console.error("rpc() threw an error:", err);
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      console.log("handleSubmit finally block ran");
       setSubmitting(false);
     }
+  }
+
+  async function handleCopy() {
+    if (!secretHex) return;
+    await navigator.clipboard.writeText(secretHex);
+    setCopied(true);
   }
 
   return (
@@ -106,10 +110,15 @@ export function NewSaleForm({
           {submitting ? "Issuing..." : "New sale"}
         </button>
       </form>
-      {lastSecret && (
-        <p className="text-xs break-all">
-          Receipt issued. Secret (shown here only for testing — this won't stay visible once we build the QR code): {lastSecret}
-        </p>
+
+      {qrImage && secretHex && (
+        <div className="flex flex-col items-center gap-2 border rounded-lg p-4">
+          <p className="text-sm text-green-700">Ready to scan</p>
+          <img src={qrImage} alt="Receipt QR code" width={180} height={180} />
+          <button type="button" onClick={handleCopy}>
+            {copied ? "Copied" : "Copy code"}
+          </button>
+        </div>
       )}
     </div>
   );

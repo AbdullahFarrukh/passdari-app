@@ -7,6 +7,7 @@ import { PublicKey } from "@solana/web3.js";
 import { useProgram } from "@/lib/useProgram";
 import { RegisterBusinessForm } from "@/components/RegisterBusinessForm";
 import { MerchantDashboard } from "@/components/MerchantDashboard";
+import { NewSaleForm } from "@/components/NewSaleForm";
 
 const WalletMultiButton = dynamic(
   () =>
@@ -51,8 +52,14 @@ export default function Home() {
           <RegisterBusinessForm onDone={checkForBusiness} />
         )}
 
-        {wallet && myBusiness && myBusiness !== "checking" && (
-          <MerchantDashboard business={myBusiness} />
+                {wallet && myBusiness && myBusiness !== "checking" && (
+          <>
+            <MerchantDashboard business={myBusiness} />
+            <NewSaleForm
+              minPurchaseMinor={Number(myBusiness.minPurchaseAmount.toString())}
+              onDone={checkForBusiness}
+            />
+          </>
         )}
       </main>
     </div>

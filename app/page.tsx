@@ -6,6 +6,7 @@ import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { useProgram } from "@/lib/useProgram";
 import { RegisterBusinessForm } from "@/components/RegisterBusinessForm";
+import { MerchantDashboard } from "@/components/MerchantDashboard";
 
 const WalletMultiButton = dynamic(
   () =>
@@ -15,12 +16,10 @@ const WalletMultiButton = dynamic(
   { ssr: false }
 );
 
-type Business = { name: string; category: string; rewardLabel: string };
-
 export default function Home() {
   const program = useProgram();
   const wallet = useAnchorWallet();
-  const [myBusiness, setMyBusiness] = useState<Business | null | "checking">("checking");
+  const [myBusiness, setMyBusiness] = useState<any | null | "checking">("checking");
 
   const checkForBusiness = () => {
     if (!program || !wallet) return;
@@ -33,7 +32,7 @@ export default function Home() {
 
     program.account.business
       .fetch(businessPda)
-      .then((account) => setMyBusiness(account as Business))
+      .then((account) => setMyBusiness(account))
       .catch(() => setMyBusiness(null));
   };
 
@@ -53,7 +52,7 @@ export default function Home() {
         )}
 
         {wallet && myBusiness && myBusiness !== "checking" && (
-          <p>Welcome back, {myBusiness.name}.</p>
+          <MerchantDashboard business={myBusiness} />
         )}
       </main>
     </div>

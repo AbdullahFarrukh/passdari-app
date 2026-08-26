@@ -5,6 +5,7 @@ import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { keccak256 } from "js-sha3";
 import { signUp, signIn } from "@/lib/customerAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
+import { MyCards } from "@/components/MyCards";
 
 export default function CustomerPage() {
   const [username, setUsername] = useState("");
@@ -94,6 +95,7 @@ export default function CustomerPage() {
         </div>
         {authError && <p className="text-red-600 text-sm">{authError}</p>}
         {keypair && <p className="text-sm">Logged in. Address: {keypair.publicKey.toBase58()}</p>}
+                {keypair && <MyCards keypair={keypair} />}
       </div>
 
       {keypair && (

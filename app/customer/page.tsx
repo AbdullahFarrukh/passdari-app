@@ -6,6 +6,7 @@ import { keccak256 } from "js-sha3";
 import { signUp, signIn } from "@/lib/customerAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { MyCards } from "@/components/MyCards";
+import { MyVouchers } from "@/components/MyVouchers";
 
 export default function CustomerPage() {
   const [username, setUsername] = useState("");
@@ -16,7 +17,7 @@ export default function CustomerPage() {
   const [businessOwner, setBusinessOwner] = useState("");
   const [secretHex, setSecretHex] = useState("");
   const [claimError, setClaimError] = useState<string | null>(null);
-  const [stamps, setStamps] = useState<number | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const program = useCustomerProgram(keypair);
 
@@ -77,8 +78,8 @@ export default function CustomerPage() {
         })
         .rpc();
 
-      const card = await program.account.loyaltyCard.fetch(cardPda);
-      setStamps(card.stamps as number);
+      setSecretHex("");
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       setClaimError(err instanceof Error ? err.message : "Something went wrong");
     }
@@ -95,7 +96,6 @@ export default function CustomerPage() {
         </div>
         {authError && <p className="text-red-600 text-sm">{authError}</p>}
         {keypair && <p className="text-sm">Logged in. Address: {keypair.publicKey.toBase58()}</p>}
-                {keypair && <MyCards keypair={keypair} />}
       </div>
 
       {keypair && (
@@ -114,7 +114,13 @@ export default function CustomerPage() {
           />
           <button onClick={handleClaim}>Claim stamp</button>
           {claimError && <p className="text-red-600 text-sm">{claimError}</p>}
-          {stamps !== null && <p className="text-sm">Card now has {stamps} stamp(s).</p>}
+        </div>
+      )}
+
+      {keypair && (
+        <div className="flex flex-col items-center gap-6 border-t pt-4 w-full">
+          <MyCards keypair={keypair} refreshKey={refreshKey} onChange={() => setRefreshKey((k) => k + 1)} />
+          <MyVouchers keypair={keypair} refreshKey={refreshKey} />
         </div>
       )}
     </div>

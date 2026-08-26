@@ -8,6 +8,7 @@ import { useProgram } from "@/lib/useProgram";
 import { RegisterBusinessForm } from "@/components/RegisterBusinessForm";
 import { MerchantDashboard } from "@/components/MerchantDashboard";
 import { NewSaleForm } from "@/components/NewSaleForm";
+import { PresentedVouchers } from "@/components/PresentedVouchers";
 
 const WalletMultiButton = dynamic(
   () =>
@@ -21,6 +22,7 @@ export default function Home() {
   const program = useProgram();
   const wallet = useAnchorWallet();
   const [myBusiness, setMyBusiness] = useState<any | null | "checking">("checking");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const checkForBusiness = () => {
     if (!program || !wallet) return;
@@ -82,6 +84,14 @@ export default function Home() {
             <NewSaleForm
               minPurchaseMinor={Number(myBusiness.minPurchaseAmount.toString())}
               onDone={checkForBusiness}
+            />
+            <PresentedVouchers
+              wallet={wallet}
+              refreshKey={refreshKey}
+              onChange={() => {
+                setRefreshKey((k) => k + 1);
+                checkForBusiness();
+              }}
             />
             <button onClick={handleLowerThreshold} className="text-xs text-gray-500 underline">
               Lower reward threshold to 1 (testing only)

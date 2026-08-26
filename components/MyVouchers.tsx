@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Keypair } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
 
 type VoucherEntry = {
@@ -10,9 +10,19 @@ type VoucherEntry = {
   pendingRedemption: boolean;
 };
 
-export function MyVouchers({ keypair, refreshKey }: { keypair: Keypair; refreshKey: number }) {
+export function MyVouchers({
+  keypair,
+  refreshKey,
+  onChange,
+}: {
+  keypair: Keypair;
+  refreshKey: number;
+  onChange: () => void;
+}) {
   const program = useCustomerProgram(keypair);
   const [vouchers, setVouchers] = useState<VoucherEntry[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!program) return;
@@ -39,6 +49,48 @@ export function MyVouchers({ keypair, refreshKey }: { keypair: Keypair; refreshK
     load();
   }, [program, refreshKey]);
 
+  async function handlePresent(voucherAddress: string) {
+    if (!program) return;
+    setError(null);
+    setBusy(voucherAddress);
+
+    try {
+      await program.methods
+        .presentVoucher()
+        .accounts({
+          voucher: new PublicKey(voucherAddress),
+          owner: keypair.publicKey,
+        })
+        .rpc();
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleCancel(voucherAddress: string) {
+    if (!program) return;
+    setError(null);
+    setBusy(voucherAddress);
+
+    try {
+      await program.methods
+        .cancelPresentation()
+        .accounts({
+          voucher: new PublicKey(voucherAddress),
+          owner: keypair.publicKey,
+        })
+        .rpc();
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (vouchers === null) return null;
   if (vouchers.length === 0) return <p className="text-sm text-gray-500">No vouchers yet.</p>;
 
@@ -46,11 +98,24 @@ export function MyVouchers({ keypair, refreshKey }: { keypair: Keypair; refreshK
     <div className="flex flex-col gap-2 w-full max-w-sm">
       <p className="text-sm font-semibold">My vouchers</p>
       {vouchers.map((v) => (
-        <div key={v.address} className="border rounded-lg p-3 text-sm flex justify-between">
-          <span>Voucher #{v.voucherId}</span>
-          <span className="text-gray-500">{v.pendingRedemption ? "Presented" : "Ready"}</span>
+        <div key={v.address} className="border rounded-lg p-3 text-sm flex flex-col gap-2">
+          <div className="flex justify-between">
+            <span>Voucher #{v.voucherId}</span>
+            <span className="text-gray-500">{v.pendingRedemption ? "Presented" : "Ready"}</span>
+          </div>
+          {!v.pendingRedemption && (
+            <button disabled={busy === v.address} onClick={() => handlePresent(v.address)}>
+              {busy === v.address ? "Presenting..." : "Present to merchant"}
+            </button>
+          )}
+          {v.pendingRedemption && (
+            <button disabled={busy === v.address} onClick={() => handleCancel(v.address)}>
+              {busy === v.address ? "Cancelling..." : "Cancel"}
+            </button>
+          )}
         </div>
       ))}
+      {error && <p className="text-red-600 text-sm">{error}</p>}
     </div>
   );
 }

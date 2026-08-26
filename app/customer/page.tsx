@@ -120,7 +120,7 @@ export default function CustomerPage() {
       {keypair && (
         <div className="flex flex-col items-center gap-6 border-t pt-4 w-full">
           <MyCards keypair={keypair} refreshKey={refreshKey} onChange={() => setRefreshKey((k) => k + 1)} />
-          <MyVouchers keypair={keypair} refreshKey={refreshKey} />
+                    <MyVouchers keypair={keypair} refreshKey={refreshKey} onChange={() => setRefreshKey((k) => k + 1)} />
         </div>
       )}
     </div>

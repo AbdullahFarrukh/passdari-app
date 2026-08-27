@@ -9,6 +9,7 @@ import { RegisterBusinessForm } from "@/components/RegisterBusinessForm";
 import { MerchantDashboard } from "@/components/MerchantDashboard";
 import { NewSaleForm } from "@/components/NewSaleForm";
 import { PresentedVouchers } from "@/components/PresentedVouchers";
+import { MerchantCopilot } from "@/components/MerchantCopilot";
 
 const WalletMultiButton = dynamic(
   () =>
@@ -96,6 +97,8 @@ export default function Home() {
             minPurchaseMinor={Number(myBusiness.minPurchaseAmount.toString())}
             onDone={checkForBusiness}
           />
+
+         <MerchantCopilot ownerAddress={wallet.publicKey.toBase58()} />
 
           <PresentedVouchers
             wallet={wallet}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { keccak256 } from "js-sha3";
-import { signUp, signIn } from "@/lib/customerAuth";
+import { signUp, signIn, recoverAccount } from "@/lib/customerAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { MyCards } from "@/components/MyCards";
 import { MyVouchers } from "@/components/MyVouchers";
@@ -14,20 +14,32 @@ export default function CustomerPage() {
   const [password, setPassword] = useState("");
   const [keypair, setKeypair] = useState<Keypair | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [newMnemonic, setNewMnemonic] = useState<string | null>(null);
+
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryUsername, setRecoveryUsername] = useState("");
+  const [recoveryPhrase, setRecoveryPhrase] = useState("");
+  const [recoveryPassword, setRecoveryPassword] = useState("");
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
   const [businessOwner, setBusinessOwner] = useState("");
   const [secretHex, setSecretHex] = useState("");
   const [claimError, setClaimError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [cardCount, setCardCount] = useState(0);
 
   const program = useCustomerProgram(keypair);
 
   async function handleSignUp() {
     setAuthError(null);
     setKeypair(null);
+    setNewMnemonic(null);
     try {
-      setKeypair(await signUp(username, password));
+      const { keypair: kp, mnemonic } = await signUp(username, password);
+      setKeypair(kp);
+      setNewMnemonic(mnemonic);
     } catch (err) {
+      console.error("Sign up failed:", err);
       setAuthError(err instanceof Error ? err.message : "Something went wrong");
     }
   }
@@ -36,10 +48,38 @@ export default function CustomerPage() {
     setAuthError(null);
     setKeypair(null);
     try {
-      setKeypair(await signIn(username, password));
+      const kp = await signIn(username, password);
+      setKeypair(kp);
     } catch (err) {
-      setAuthError(err instanceof Error ? err.message : "Something went wrong");
+      console.error("Sign in failed:", err);
+      setAuthError("Incorrect username or password.");
     }
+  }
+
+  async function handleRecover() {
+    setRecoveryError(null);
+    try {
+      const kp = await recoverAccount(recoveryUsername, recoveryPhrase, recoveryPassword);
+      setKeypair(kp);
+      setUsername(recoveryUsername);
+      setShowRecovery(false);
+      setRecoveryUsername("");
+      setRecoveryPhrase("");
+      setRecoveryPassword("");
+    } catch (err) {
+      console.error("Recovery failed:", err);
+      setRecoveryError(err instanceof Error ? err.message : "Something went wrong");
+    }
+  }
+
+  function handleSignOut() {
+    setKeypair(null);
+    setUsername("");
+    setPassword("");
+    setNewMnemonic(null);
+    setAuthError(null);
+    setRefreshKey(0);
+    setCardCount(0);
   }
 
   async function handleClaim() {
@@ -88,16 +128,72 @@ export default function CustomerPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-8">
-      <div className="flex flex-col items-center gap-2">
-        <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-        <input placeholder="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <div className="flex gap-2">
-          <button onClick={handleSignUp}>Sign up</button>
-          <button onClick={handleSignIn}>Sign in</button>
+      {!keypair && (
+        <div className="flex flex-col items-center gap-2">
+          <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <input
+            placeholder="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <button onClick={handleSignUp}>Sign up</button>
+            <button onClick={handleSignIn}>Sign in</button>
+          </div>
+          <button className="text-xs text-gray-500 underline" onClick={() => setShowRecovery((s) => !s)}>
+            Forgot password?
+          </button>
+          {authError && <p className="text-red-600 text-sm">{authError}</p>}
+
+          {showRecovery && (
+            <div className="flex flex-col items-center gap-2 border-t pt-4 w-full mt-2">
+              <p className="text-sm font-semibold">Recover your account</p>
+              <input
+                placeholder="Username to recover"
+                value={recoveryUsername}
+                onChange={(e) => setRecoveryUsername(e.target.value)}
+                className="w-full"
+              />
+              <textarea
+                placeholder="Your 12-word phrase"
+                value={recoveryPhrase}
+                onChange={(e) => setRecoveryPhrase(e.target.value)}
+                className="w-full"
+                rows={2}
+              />
+              <input
+                placeholder="New password"
+                type="password"
+                value={recoveryPassword}
+                onChange={(e) => setRecoveryPassword(e.target.value)}
+                className="w-full"
+              />
+              <button onClick={handleRecover}>Recover account</button>
+              {recoveryError && <p className="text-red-600 text-sm">{recoveryError}</p>}
+            </div>
+          )}
         </div>
-        {authError && <p className="text-red-600 text-sm">{authError}</p>}
-        {keypair && <p className="text-sm">Logged in. Address: {keypair.publicKey.toBase58()}</p>}
-      </div>
+      )}
+
+      {keypair && (
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-sm font-semibold">Signed in as {username}</p>
+          <p className="text-xs text-gray-500">{keypair.publicKey.toBase58()}</p>
+          <button className="text-xs text-gray-500 underline" onClick={handleSignOut}>
+            Sign out
+          </button>
+        </div>
+      )}
+
+      {newMnemonic && (
+        <div className="border-2 border-red-500 rounded-lg p-3 max-w-sm text-sm">
+          <p className="font-semibold text-red-600 mb-2">
+            Write these 12 words down now. This is the only time they will ever be shown.
+          </p>
+          <p className="font-mono break-words">{newMnemonic}</p>
+        </div>
+      )}
 
       {keypair && (
         <div className="flex flex-col items-center gap-2 border-t pt-4 w-full max-w-sm">
@@ -120,9 +216,14 @@ export default function CustomerPage() {
 
       {keypair && (
         <div className="flex flex-col items-center gap-6 border-t pt-4 w-full">
-          <MyCards keypair={keypair} refreshKey={refreshKey} onChange={() => setRefreshKey((k) => k + 1)} />
-                    <MyVouchers keypair={keypair} refreshKey={refreshKey} onChange={() => setRefreshKey((k) => k + 1)} />
-                                <BusinessDirectory keypair={keypair} />
+          <MyCards
+            keypair={keypair}
+            refreshKey={refreshKey}
+            onChange={() => setRefreshKey((k) => k + 1)}
+            onLoaded={setCardCount}
+          />
+          <MyVouchers keypair={keypair} refreshKey={refreshKey} onChange={() => setRefreshKey((k) => k + 1)} />
+          {cardCount > 0 && <BusinessDirectory keypair={keypair} />}
         </div>
       )}
     </div>

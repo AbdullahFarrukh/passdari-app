@@ -1,6 +1,8 @@
 import { Keypair } from "@solana/web3.js";
+import * as bip39 from "bip39";
+import { derivePath } from "ed25519-hd-key";
 
-async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+async function deriveEncryptionKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
   const passwordKey = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(password),
@@ -17,19 +19,20 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
   );
 }
 
-export async function signUp(username: string, password: string): Promise<Keypair> {
-  if (localStorage.getItem(`customer:${username}`)) {
-    throw new Error("That username is already taken on this device.");
-  }
+function keypairFromMnemonic(mnemonic: string): Keypair {
+  const seed = bip39.mnemonicToSeedSync(mnemonic);
+  const derived = derivePath("m/44'/501'/0'/0'", seed.toString("hex"));
+  return Keypair.fromSeed(derived.key);
+}
 
-  const keypair = Keypair.generate();
+async function storeMnemonic(username: string, mnemonic: string, password: string) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveKey(password, salt);
+  const key = await deriveEncryptionKey(password, salt);
   const encrypted = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv },
     key,
-    keypair.secretKey
+    new TextEncoder().encode(mnemonic)
   );
 
   localStorage.setItem(
@@ -40,8 +43,24 @@ export async function signUp(username: string, password: string): Promise<Keypai
       encrypted: Array.from(new Uint8Array(encrypted)),
     })
   );
+}
 
-  return keypair;
+export async function signUp(
+  username: string,
+  password: string
+): Promise<{ keypair: Keypair; mnemonic: string }> {
+  if (!username || !password) {
+    throw new Error("Please enter a username and password.");
+  }
+  if (localStorage.getItem(`customer:${username}`)) {
+    throw new Error("That username is already taken on this device.");
+  }
+
+  const mnemonic = bip39.generateMnemonic();
+  const keypair = keypairFromMnemonic(mnemonic);
+  await storeMnemonic(username, mnemonic, password);
+
+  return { keypair, mnemonic };
 }
 
 export async function signIn(username: string, password: string): Promise<Keypair> {
@@ -49,7 +68,7 @@ export async function signIn(username: string, password: string): Promise<Keypai
   if (!raw) throw new Error("No account found with that username on this device.");
 
   const { salt, iv, encrypted } = JSON.parse(raw);
-  const key = await deriveKey(password, new Uint8Array(salt));
+  const key = await deriveEncryptionKey(password, new Uint8Array(salt));
 
   const decrypted = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: new Uint8Array(iv) },
@@ -57,5 +76,30 @@ export async function signIn(username: string, password: string): Promise<Keypai
     new Uint8Array(encrypted)
   );
 
-  return Keypair.fromSecretKey(new Uint8Array(decrypted));
+  const mnemonic = new TextDecoder().decode(decrypted);
+  return keypairFromMnemonic(mnemonic);
+}
+
+export async function recoverAccount(
+  username: string,
+  mnemonic: string,
+  newPassword: string
+): Promise<Keypair> {
+  if (!username) {
+    throw new Error("Please enter the username for this account.");
+  }
+  if (!newPassword) {
+    throw new Error("Please choose a new password.");
+  }
+
+  const trimmed = mnemonic.trim().toLowerCase();
+
+  if (!bip39.validateMnemonic(trimmed)) {
+    throw new Error("That doesn't look like a valid 12-word phrase. Check the spelling and spacing.");
+  }
+
+  const keypair = keypairFromMnemonic(trimmed);
+  await storeMnemonic(username, trimmed, newPassword);
+
+  return keypair;
 }

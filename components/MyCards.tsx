@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Keypair } from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import BN from "bn.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+
 type CardWithBusiness = {
   cardAddress: string;
   businessAddress: any;
@@ -18,10 +18,12 @@ export function MyCards({
   keypair,
   refreshKey,
   onChange,
+  onLoaded,
 }: {
   keypair: Keypair;
   refreshKey: number;
   onChange: () => void;
+  onLoaded?: (count: number) => void;
 }) {
   const program = useCustomerProgram(keypair);
   const [cards, setCards] = useState<CardWithBusiness[] | null>(null);
@@ -55,6 +57,7 @@ export function MyCards({
     );
 
     setCards(withBusinessInfo);
+    onLoaded?.(withBusinessInfo.length);
   }
 
   useEffect(() => {

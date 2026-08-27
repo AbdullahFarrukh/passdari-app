@@ -23,6 +23,7 @@ export function MyVouchers({
   const [vouchers, setVouchers] = useState<VoucherEntry[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [giftAddress, setGiftAddress] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!program) return;
@@ -91,6 +92,33 @@ export function MyVouchers({
     }
   }
 
+  async function handleGift(voucherAddress: string) {
+    if (!program) return;
+    const recipient = giftAddress[voucherAddress];
+    if (!recipient) return;
+
+    setError(null);
+    setBusy(voucherAddress);
+
+    try {
+      const newOwner = new PublicKey(recipient);
+
+      await program.methods
+        .transferVoucher(newOwner)
+        .accounts({
+          voucher: new PublicKey(voucherAddress),
+          owner: keypair.publicKey,
+        })
+        .rpc();
+
+      onChange();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   if (vouchers === null) return null;
   if (vouchers.length === 0) return <p className="text-sm text-gray-500">No vouchers yet.</p>;
 
@@ -103,11 +131,29 @@ export function MyVouchers({
             <span>Voucher #{v.voucherId}</span>
             <span className="text-gray-500">{v.pendingRedemption ? "Presented" : "Ready"}</span>
           </div>
+
           {!v.pendingRedemption && (
-            <button disabled={busy === v.address} onClick={() => handlePresent(v.address)}>
-              {busy === v.address ? "Presenting..." : "Present to merchant"}
-            </button>
+            <>
+              <button disabled={busy === v.address} onClick={() => handlePresent(v.address)}>
+                {busy === v.address ? "Presenting..." : "Present to merchant"}
+              </button>
+
+              <div className="flex gap-2">
+                <input
+                  placeholder="Recipient's address"
+                  className="flex-1"
+                  value={giftAddress[v.address] ?? ""}
+                  onChange={(e) =>
+                    setGiftAddress((prev) => ({ ...prev, [v.address]: e.target.value }))
+                  }
+                />
+                <button disabled={busy === v.address} onClick={() => handleGift(v.address)}>
+                  {busy === v.address ? "Sending..." : "Gift"}
+                </button>
+              </div>
+            </>
           )}
+
           {v.pendingRedemption && (
             <button disabled={busy === v.address} onClick={() => handleCancel(v.address)}>
               {busy === v.address ? "Cancelling..." : "Cancel"}

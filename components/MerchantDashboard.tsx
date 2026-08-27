@@ -18,28 +18,28 @@ export function MerchantDashboard({ business }: { business: Business }) {
   return (
     <div className="w-full max-w-2xl flex flex-col gap-6">
       <div>
-        <p className="text-lg font-semibold">{business.name}</p>
-        <p className="text-sm text-gray-500">
+        <p className="font-mono text-lg font-semibold text-ink">{business.name}</p>
+        <p className="text-sm text-charcoal/60">
           {business.category} · {business.rewardLabel}
         </p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="border rounded-lg p-3">
-          <p className="text-xs text-gray-500">Cards registered</p>
-          <p className="text-xl font-semibold">{business.totalCards}</p>
+        <div className="border border-line rounded-lg p-3 bg-white/60">
+          <p className="text-xs text-charcoal/60 mb-1">Cards registered</p>
+          <p className="font-mono text-2xl font-semibold text-ink">{business.totalCards}</p>
         </div>
-        <div className="border rounded-lg p-3">
-          <p className="text-xs text-gray-500">Stamps issued</p>
-          <p className="text-xl font-semibold">{stampsIssued}</p>
+        <div className="border border-line rounded-lg p-3 bg-white/60">
+          <p className="text-xs text-charcoal/60 mb-1">Stamps issued</p>
+          <p className="font-mono text-2xl font-semibold text-ink">{stampsIssued}</p>
         </div>
-        <div className="border rounded-lg p-3">
-          <p className="text-xs text-gray-500">Rewards given</p>
-          <p className="text-xl font-semibold">{business.totalRedemptions}</p>
+        <div className="border border-line rounded-lg p-3 bg-white/60">
+          <p className="text-xs text-charcoal/60 mb-1">Rewards given</p>
+          <p className="font-mono text-2xl font-semibold text-ink">{business.totalRedemptions}</p>
         </div>
-        <div className="border rounded-lg p-3">
-          <p className="text-xs text-gray-500">Vouchers pending</p>
-          <p className="text-xl font-semibold">{vouchersPending}</p>
+        <div className="border border-line rounded-lg p-3 bg-white/60">
+          <p className="text-xs text-charcoal/60 mb-1">Vouchers pending</p>
+          <p className="font-mono text-2xl font-semibold text-stamp-red">{vouchersPending}</p>
         </div>
       </div>
     </div>

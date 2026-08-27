@@ -141,39 +141,59 @@ export default function CustomerPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-8">
+    <div className="flex flex-col items-center min-h-screen gap-6 p-8 bg-paper text-charcoal">
       {!keypair && (
-        <div className="flex flex-col items-center gap-2">
-          <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
+        <div className="flex flex-col items-center gap-2 w-full max-w-sm mt-16">
+          <p className="font-mono text-lg text-ink mb-2">Loyalty</p>
+          <input
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
+          />
           <input
             placeholder="Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
           />
-          <div className="flex gap-2">
-            <button onClick={handleSignUp}>Sign up</button>
-            <button onClick={handleSignIn}>Sign in</button>
+          <div className="flex gap-2 w-full">
+            <button
+              className="flex-1 bg-ink text-paper rounded-md py-2 text-sm font-medium"
+              onClick={handleSignUp}
+            >
+              Sign up
+            </button>
+            <button
+              className="flex-1 border border-ink text-ink rounded-md py-2 text-sm font-medium"
+              onClick={handleSignIn}
+            >
+              Sign in
+            </button>
           </div>
-          <button className="text-xs text-gray-500 underline" onClick={() => setShowRecovery((s) => !s)}>
+          <button
+            className="text-xs text-charcoal/60 underline"
+            onClick={() => setShowRecovery((s) => !s)}
+          >
             Forgot password?
           </button>
-          {authError && <p className="text-red-600 text-sm">{authError}</p>}
+          {authError && <p className="text-stamp-red text-sm">{authError}</p>}
 
           {showRecovery && (
-            <div className="flex flex-col items-center gap-2 border-t pt-4 w-full mt-2">
-              <p className="text-sm font-semibold">Recover your account</p>
+            <div className="flex flex-col items-center gap-2 border-t border-line pt-4 w-full mt-2">
+              <p className="text-sm font-semibold text-ink">Recover your account</p>
               <input
                 placeholder="Username to recover"
                 value={recoveryUsername}
                 onChange={(e) => setRecoveryUsername(e.target.value)}
-                className="w-full"
+                className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
               />
               <textarea
                 placeholder="Your 12-word phrase"
                 value={recoveryPhrase}
                 onChange={(e) => setRecoveryPhrase(e.target.value)}
-                className="w-full"
+                className="w-full border border-line rounded-md px-3 py-2 bg-white/60 font-mono text-sm"
                 rows={2}
               />
               <input
@@ -181,49 +201,54 @@ export default function CustomerPage() {
                 type="password"
                 value={recoveryPassword}
                 onChange={(e) => setRecoveryPassword(e.target.value)}
-                className="w-full"
+                className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
               />
-              <button onClick={handleRecover}>Recover account</button>
-              {recoveryError && <p className="text-red-600 text-sm">{recoveryError}</p>}
+              <button
+                className="w-full bg-ink text-paper rounded-md py-2 text-sm font-medium"
+                onClick={handleRecover}
+              >
+                Recover account
+              </button>
+              {recoveryError && <p className="text-stamp-red text-sm">{recoveryError}</p>}
             </div>
           )}
         </div>
       )}
 
       {keypair && (
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-sm font-semibold">Signed in as {username}</p>
-          <p className="text-xs text-gray-500">{keypair.publicKey.toBase58()}</p>
-          <button className="text-xs text-gray-500 underline" onClick={handleSignOut}>
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-sm font-medium">Signed in as {username}</p>
+          <p className="text-xs text-charcoal/50 font-mono">{keypair.publicKey.toBase58()}</p>
+          <button className="text-xs text-charcoal/60 underline" onClick={handleSignOut}>
             Sign out
           </button>
         </div>
       )}
 
-      {keypair && (
-        <div className="flex gap-4 text-sm">
-          <div className="text-center">
-            <p className="font-semibold text-lg">{stats.totalStamps}</p>
-            <p className="text-gray-500 text-xs">Total stamps</p>
+            {keypair && (
+        <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
+          <div className="border border-line rounded-lg p-3 bg-white/60">
+            <p className="text-xs text-charcoal/60 mb-1">Total stamps</p>
+            <p className="font-mono font-semibold text-2xl text-ink">{stats.totalStamps}</p>
           </div>
-          <div className="text-center">
-            <p className="font-semibold text-lg">{stats.voucherCount}</p>
-            <p className="text-gray-500 text-xs">Vouchers held</p>
+          <div className="border border-line rounded-lg p-3 bg-white/60">
+            <p className="text-xs text-charcoal/60 mb-1">Vouchers held</p>
+            <p className="font-mono font-semibold text-2xl text-ink">{stats.voucherCount}</p>
           </div>
-          <div className="text-center">
-            <p className="font-semibold text-lg">{stats.completedCards}</p>
-            <p className="text-gray-500 text-xs">Cards completed</p>
+          <div className="border border-line rounded-lg p-3 bg-white/60">
+            <p className="text-xs text-charcoal/60 mb-1">Cards completed</p>
+            <p className="font-mono font-semibold text-2xl text-ink">{stats.completedCards}</p>
           </div>
-          <div className="text-center">
-            <p className="font-semibold text-lg">{stats.inProgressCards}</p>
-            <p className="text-gray-500 text-xs">In progress</p>
+          <div className="border border-line rounded-lg p-3 bg-white/60">
+            <p className="text-xs text-charcoal/60 mb-1">In progress</p>
+            <p className="font-mono font-semibold text-2xl text-ink">{stats.inProgressCards}</p>
           </div>
         </div>
       )}
 
       {newMnemonic && (
-        <div className="border-2 border-red-500 rounded-lg p-3 max-w-sm text-sm">
-          <p className="font-semibold text-red-600 mb-2">
+        <div className="border-2 border-stamp-red rounded-lg p-3 max-w-sm text-sm bg-white/60">
+          <p className="font-semibold text-stamp-red mb-2">
             Write these 12 words down now. This is the only time they will ever be shown.
           </p>
           <p className="font-mono break-words">{newMnemonic}</p>
@@ -231,13 +256,19 @@ export default function CustomerPage() {
       )}
 
       {keypair && (
-        <div className="flex flex-col items-center gap-2 border-t pt-4 w-full max-w-sm">
-          <button
+        <div className="flex flex-col items-center gap-2 border-t border-line pt-4 w-full max-w-sm">
+                    <button
             type="button"
-            className="text-xs text-gray-500 underline"
+            className="w-full bg-ink text-paper rounded-md py-3 text-sm font-medium flex items-center justify-center gap-2"
             onClick={() => setShowScanner((s) => !s)}
           >
-            {showScanner ? "Hide scanner" : "Scan QR"}
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01" />
+            </svg>
+            {showScanner ? "Hide scanner" : "Scan to claim"}
           </button>
 
           {showScanner && (
@@ -253,15 +284,20 @@ export default function CustomerPage() {
             placeholder="Code (scan or paste from merchant screen)"
             value={secretHex}
             onChange={(e) => setSecretHex(e.target.value)}
-            className="w-full"
+            className="w-full border border-line rounded-md px-3 py-2 bg-white/60 font-mono text-sm"
           />
-          <button onClick={handleClaim}>Claim stamp</button>
-          {claimError && <p className="text-red-600 text-sm">{claimError}</p>}
+          <button
+            className="w-full bg-stamp-red text-paper rounded-md py-2 text-sm font-medium"
+            onClick={handleClaim}
+          >
+            Claim stamp
+          </button>
+          {claimError && <p className="text-stamp-red text-sm">{claimError}</p>}
         </div>
       )}
 
       {keypair && (
-        <div className="flex flex-col items-center gap-6 border-t pt-4 w-full">
+        <div className="flex flex-col items-center gap-6 border-t border-line pt-4 w-full">
           <MyCards
             keypair={keypair}
             refreshKey={refreshKey}

@@ -25,6 +25,7 @@ export function MyVouchers({
   const [vouchers, setVouchers] = useState<VoucherEntry[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [giftAddress, setGiftAddress] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!program) return;
@@ -116,54 +117,74 @@ export function MyVouchers({
     }
   }
 
-  const [giftAddress, setGiftAddress] = useState<Record<string, string>>({});
-
   if (vouchers === null) return null;
-  if (vouchers.length === 0) return <p className="text-sm text-gray-500">No vouchers yet.</p>;
+  if (vouchers.length === 0) {
+    return <p className="text-sm text-charcoal/60">No vouchers yet.</p>;
+  }
 
   return (
     <div className="flex flex-col gap-2 w-full max-w-sm">
-      <p className="text-sm font-semibold">My vouchers</p>
+      <p className="font-mono text-xs uppercase tracking-wider text-charcoal/60">My vouchers</p>
       {vouchers.map((v) => (
-        <div key={v.address} className="border rounded-lg p-3 text-sm flex flex-col gap-2">
-          <div className="flex justify-between">
-            <span>Voucher #{v.voucherId}</span>
-            <span className="text-gray-500">{v.pendingRedemption ? "Presented" : "Ready"}</span>
+        <div
+          key={v.address}
+          className="border border-line rounded-lg p-3 text-sm flex flex-col gap-2 bg-white/60"
+        >
+          <div className="flex justify-between items-baseline">
+            <span className="font-mono font-medium text-ink">Voucher #{v.voucherId}</span>
+            <span
+              className={`font-mono text-xs px-2 py-0.5 rounded-full ${
+                v.pendingRedemption
+                  ? "bg-stamp-red/10 text-stamp-red"
+                  : "bg-quiet-green/10 text-quiet-green"
+              }`}
+            >
+              {v.pendingRedemption ? "Presented" : "Ready"}
+            </span>
           </div>
 
           {!v.pendingRedemption && (
             <>
-              <button disabled={busy === v.address} onClick={() => handlePresent(v.address)}>
-                {busy === v.address ? "Presenting..." : "Present to merchant"}
+              <button
+                className="border border-ink text-ink rounded-md py-1.5 text-sm disabled:opacity-50"
+                disabled={busy === v.address}
+                onClick={() => handlePresent(v.address)}
+              >
+                {busy === v.address ? "Presenting…" : "Present to merchant"}
               </button>
 
               <div className="flex gap-2">
                 <input
                   placeholder="Recipient's address"
-                  className="flex-1"
+                  className="flex-1 border border-line rounded-md px-2 py-1 text-sm bg-transparent"
                   value={giftAddress[v.address] ?? ""}
                   onChange={(e) =>
                     setGiftAddress((prev) => ({ ...prev, [v.address]: e.target.value }))
                   }
                 />
                 <button
+                  className="border border-line rounded-md px-3 text-sm disabled:opacity-50"
                   disabled={busy === v.address}
                   onClick={() => handleGift(v.address, giftAddress[v.address] ?? "")}
                 >
-                  {busy === v.address ? "Sending..." : "Gift"}
+                  {busy === v.address ? "Sending…" : "Gift"}
                 </button>
               </div>
             </>
           )}
 
           {v.pendingRedemption && (
-            <button disabled={busy === v.address} onClick={() => handleCancel(v.address)}>
-              {busy === v.address ? "Cancelling..." : "Cancel"}
+            <button
+              className="border border-line rounded-md py-1.5 text-sm disabled:opacity-50"
+              disabled={busy === v.address}
+              onClick={() => handleCancel(v.address)}
+            >
+              {busy === v.address ? "Cancelling…" : "Cancel"}
             </button>
           )}
         </div>
       ))}
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && <p className="text-stamp-red text-sm">{error}</p>}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { signUp, signIn } from "@/lib/customerAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { MyCards } from "@/components/MyCards";
 import { MyVouchers } from "@/components/MyVouchers";
+import { BusinessDirectory } from "@/components/BusinessDirectory";
 
 export default function CustomerPage() {
   const [username, setUsername] = useState("");
@@ -121,6 +122,7 @@ export default function CustomerPage() {
         <div className="flex flex-col items-center gap-6 border-t pt-4 w-full">
           <MyCards keypair={keypair} refreshKey={refreshKey} onChange={() => setRefreshKey((k) => k + 1)} />
                     <MyVouchers keypair={keypair} refreshKey={refreshKey} onChange={() => setRefreshKey((k) => k + 1)} />
+                                <BusinessDirectory keypair={keypair} />
         </div>
       )}
     </div>

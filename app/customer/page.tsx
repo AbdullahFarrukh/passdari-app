@@ -28,6 +28,13 @@ export default function CustomerPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [cardCount, setCardCount] = useState(0);
 
+  const [stats, setStats] = useState({
+    totalStamps: 0,
+    completedCards: 0,
+    inProgressCards: 0,
+    voucherCount: 0,
+  });
+
   const program = useCustomerProgram(keypair);
 
   async function handleSignUp() {
@@ -186,6 +193,27 @@ export default function CustomerPage() {
         </div>
       )}
 
+      {keypair && (
+        <div className="flex gap-4 text-sm">
+          <div className="text-center">
+            <p className="font-semibold text-lg">{stats.totalStamps}</p>
+            <p className="text-gray-500 text-xs">Total stamps</p>
+          </div>
+          <div className="text-center">
+            <p className="font-semibold text-lg">{stats.voucherCount}</p>
+            <p className="text-gray-500 text-xs">Vouchers held</p>
+          </div>
+          <div className="text-center">
+            <p className="font-semibold text-lg">{stats.completedCards}</p>
+            <p className="text-gray-500 text-xs">Cards completed</p>
+          </div>
+          <div className="text-center">
+            <p className="font-semibold text-lg">{stats.inProgressCards}</p>
+            <p className="text-gray-500 text-xs">In progress</p>
+          </div>
+        </div>
+      )}
+
       {newMnemonic && (
         <div className="border-2 border-red-500 rounded-lg p-3 max-w-sm text-sm">
           <p className="font-semibold text-red-600 mb-2">
@@ -216,13 +244,19 @@ export default function CustomerPage() {
 
       {keypair && (
         <div className="flex flex-col items-center gap-6 border-t pt-4 w-full">
-          <MyCards
+                    <MyCards
             keypair={keypair}
             refreshKey={refreshKey}
             onChange={() => setRefreshKey((k) => k + 1)}
             onLoaded={setCardCount}
+            onStats={(s) => setStats((prev) => ({ ...prev, ...s }))}
           />
-          <MyVouchers keypair={keypair} refreshKey={refreshKey} onChange={() => setRefreshKey((k) => k + 1)} />
+          <MyVouchers
+            keypair={keypair}
+            refreshKey={refreshKey}
+            onChange={() => setRefreshKey((k) => k + 1)}
+            onCount={(count) => setStats((prev) => ({ ...prev, voucherCount: count }))}
+          />
           {cardCount > 0 && <BusinessDirectory keypair={keypair} />}
         </div>
       )}

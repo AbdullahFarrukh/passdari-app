@@ -10,6 +10,7 @@ type CardWithBusiness = {
   businessAddress: any;
   stamps: number;
   stampsRequired: number;
+  redemptions: number;
   name: string;
   rewardLabel: string;
 };
@@ -19,11 +20,13 @@ export function MyCards({
   refreshKey,
   onChange,
   onLoaded,
+  onStats,
 }: {
   keypair: Keypair;
   refreshKey: number;
   onChange: () => void;
   onLoaded?: (count: number) => void;
+  onStats?: (stats: { totalStamps: number; completedCards: number; inProgressCards: number }) => void;
 }) {
   const program = useCustomerProgram(keypair);
   const [cards, setCards] = useState<CardWithBusiness[] | null>(null);
@@ -50,6 +53,7 @@ export function MyCards({
           businessAddress: entry.account.business,
           stamps: entry.account.stamps as number,
           stampsRequired: business.stampsRequired as number,
+          redemptions: entry.account.redemptions as number,
           name: business.name as string,
           rewardLabel: business.rewardLabel as string,
         };
@@ -58,6 +62,11 @@ export function MyCards({
 
     setCards(withBusinessInfo);
     onLoaded?.(withBusinessInfo.length);
+
+    const totalStamps = withBusinessInfo.reduce((sum, c) => sum + c.stamps, 0);
+    const completedCards = withBusinessInfo.filter((c) => c.stamps >= c.stampsRequired).length;
+    const inProgressCards = withBusinessInfo.length - completedCards;
+    onStats?.({ totalStamps, completedCards, inProgressCards });
   }
 
   useEffect(() => {

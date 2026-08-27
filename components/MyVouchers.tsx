@@ -14,16 +14,17 @@ export function MyVouchers({
   keypair,
   refreshKey,
   onChange,
+  onCount,
 }: {
   keypair: Keypair;
   refreshKey: number;
   onChange: () => void;
+  onCount?: (count: number) => void;
 }) {
   const program = useCustomerProgram(keypair);
   const [vouchers, setVouchers] = useState<VoucherEntry[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [giftAddress, setGiftAddress] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!program) return;
@@ -38,13 +39,14 @@ export function MyVouchers({
         },
       ]);
 
-      setVouchers(
-        myVouchers.map((entry) => ({
-          address: entry.publicKey.toBase58(),
-          voucherId: (entry.account.voucherId as any).toString(),
-          pendingRedemption: entry.account.pendingRedemption as boolean,
-        }))
-      );
+      const mapped = myVouchers.map((entry) => ({
+        address: entry.publicKey.toBase58(),
+        voucherId: (entry.account.voucherId as any).toString(),
+        pendingRedemption: entry.account.pendingRedemption as boolean,
+      }));
+
+      setVouchers(mapped);
+      onCount?.(mapped.length);
     }
 
     load();
@@ -92,17 +94,13 @@ export function MyVouchers({
     }
   }
 
-  async function handleGift(voucherAddress: string) {
+  async function handleGift(voucherAddress: string, recipient: string) {
     if (!program) return;
-    const recipient = giftAddress[voucherAddress];
-    if (!recipient) return;
-
     setError(null);
     setBusy(voucherAddress);
 
     try {
       const newOwner = new PublicKey(recipient);
-
       await program.methods
         .transferVoucher(newOwner)
         .accounts({
@@ -110,7 +108,6 @@ export function MyVouchers({
           owner: keypair.publicKey,
         })
         .rpc();
-
       onChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -118,6 +115,8 @@ export function MyVouchers({
       setBusy(null);
     }
   }
+
+  const [giftAddress, setGiftAddress] = useState<Record<string, string>>({});
 
   if (vouchers === null) return null;
   if (vouchers.length === 0) return <p className="text-sm text-gray-500">No vouchers yet.</p>;
@@ -147,7 +146,10 @@ export function MyVouchers({
                     setGiftAddress((prev) => ({ ...prev, [v.address]: e.target.value }))
                   }
                 />
-                <button disabled={busy === v.address} onClick={() => handleGift(v.address)}>
+                <button
+                  disabled={busy === v.address}
+                  onClick={() => handleGift(v.address, giftAddress[v.address] ?? "")}
+                >
                   {busy === v.address ? "Sending..." : "Gift"}
                 </button>
               </div>

@@ -106,11 +106,13 @@ export function MyCards({
     }
   }
 
-  if (cards === null) return <p className="text-sm">Loading your cards...</p>;
+  if (cards === null) {
+    return <p className="text-sm text-charcoal/60 font-mono">Loading your cards…</p>;
+  }
 
   if (cards.length === 0) {
     return (
-      <p className="text-sm text-gray-500">
+      <p className="text-sm text-charcoal/60">
         No cards yet. Scan a receipt from a business to start your first one.
       </p>
     );
@@ -118,39 +120,54 @@ export function MyCards({
 
   return (
     <div className="flex flex-col gap-3 w-full max-w-sm">
-      <p className="text-sm font-semibold">My cards</p>
+      <p className="font-mono text-xs uppercase tracking-wider text-charcoal/60">My cards</p>
       {cards.map((card) => {
         const isFull = card.stamps >= card.stampsRequired;
         return (
-          <div key={card.cardAddress} className="border rounded-lg p-3">
-            <div className="flex justify-between text-sm mb-1">
-              <span>{card.name}</span>
-              <span className="text-gray-500">
+          <div
+            key={card.cardAddress}
+            className="border border-line rounded-lg p-4 bg-white/60"
+          >
+            <div className="flex justify-between items-baseline mb-2">
+              <span className="font-mono font-medium text-ink">{card.name}</span>
+              <span className="font-mono text-xs text-charcoal/70">
                 {card.stamps} / {card.stampsRequired}
               </span>
             </div>
-            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-600"
-                style={{
-                  width: `${Math.min(100, (card.stamps / card.stampsRequired) * 100)}%`,
-                }}
-              />
+
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {Array.from({ length: card.stampsRequired }).map((_, i) => {
+                const filled = i < card.stamps;
+                return (
+                  <span
+                    key={i}
+                    className={`inline-block w-4 h-4 rounded-full border-2 ${
+                      filled
+                        ? isFull
+                          ? "bg-stamp-red border-stamp-red"
+                          : "bg-ink border-ink"
+                        : "border-line bg-transparent"
+                    }`}
+                  />
+                );
+              })}
             </div>
-            <p className="text-xs text-gray-500 mt-1">{card.rewardLabel}</p>
+
+            <p className="text-xs text-charcoal/60">{card.rewardLabel}</p>
+
             {isFull && (
               <button
-                className="mt-2 w-full"
+                className="mt-3 w-full bg-stamp-red text-paper rounded-md py-2 text-sm font-medium disabled:opacity-50"
                 disabled={mintingFor === card.cardAddress}
                 onClick={() => handleMint(card)}
               >
-                {mintingFor === card.cardAddress ? "Minting..." : "Mint voucher"}
+                {mintingFor === card.cardAddress ? "Minting…" : "Mint voucher"}
               </button>
             )}
           </div>
         );
       })}
-      {mintError && <p className="text-red-600 text-sm">{mintError}</p>}
+      {mintError && <p className="text-stamp-red text-sm">{mintError}</p>}
     </div>
   );
 }

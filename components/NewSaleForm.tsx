@@ -72,13 +72,14 @@ export function NewSaleForm({
         })
         .rpc();
 
-      const hex = Array.from(secretBytes)
+            const hex = Array.from(secretBytes)
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
-      const qrDataUrl = await QRCode.toDataURL(hex);
+      const combinedCode = `${wallet.publicKey.toBase58()}:${hex}`;
+      const qrDataUrl = await QRCode.toDataURL(combinedCode);
 
-      setSecretHex(hex);
+      setSecretHex(combinedCode);
       setQrImage(qrDataUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

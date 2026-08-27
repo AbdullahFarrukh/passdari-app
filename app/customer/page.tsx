@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import { keccak256 } from "js-sha3";
 import { signUp, signIn, recoverAccount } from "@/lib/customerAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { MyCards } from "@/components/MyCards";
 import { MyVouchers } from "@/components/MyVouchers";
 import { BusinessDirectory } from "@/components/BusinessDirectory";
+import { QrScanner } from "@/components/QrScanner";
 
 export default function CustomerPage() {
   const [username, setUsername] = useState("");
@@ -22,8 +22,8 @@ export default function CustomerPage() {
   const [recoveryPassword, setRecoveryPassword] = useState("");
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
-  const [businessOwner, setBusinessOwner] = useState("");
   const [secretHex, setSecretHex] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [cardCount, setCardCount] = useState(0);
@@ -94,16 +94,23 @@ export default function CustomerPage() {
     setClaimError(null);
 
     try {
-      const businessPubkey = new PublicKey(businessOwner);
+      const [businessOwnerStr, secretOnly] = secretHex.split(":");
+      if (!businessOwnerStr || !secretOnly) {
+        throw new Error("This code doesn't look right — make sure you scanned or pasted the whole thing.");
+      }
+
+      const businessPubkey = new PublicKey(businessOwnerStr);
       const [businessPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("business"), businessPubkey.toBuffer()],
         program.programId
       );
 
       const secretBytes = new Uint8Array(
-        secretHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+        secretOnly.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
       );
-      const secretHashBytes = keccak256.array(secretBytes);
+
+      const keccak = await import("js-sha3");
+      const secretHashBytes = keccak.keccak256.array(secretBytes);
 
       const [receiptPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("receipt"), businessPda.toBuffer(), Buffer.from(secretHashBytes)],
@@ -225,14 +232,25 @@ export default function CustomerPage() {
 
       {keypair && (
         <div className="flex flex-col items-center gap-2 border-t pt-4 w-full max-w-sm">
+          <button
+            type="button"
+            className="text-xs text-gray-500 underline"
+            onClick={() => setShowScanner((s) => !s)}
+          >
+            {showScanner ? "Hide scanner" : "Scan QR"}
+          </button>
+
+          {showScanner && (
+            <QrScanner
+              onScan={(text) => {
+                setSecretHex(text);
+                setShowScanner(false);
+              }}
+            />
+          )}
+
           <input
-            placeholder="Business owner's wallet address"
-            value={businessOwner}
-            onChange={(e) => setBusinessOwner(e.target.value)}
-            className="w-full"
-          />
-          <input
-            placeholder="Secret code (paste from merchant screen)"
+            placeholder="Code (scan or paste from merchant screen)"
             value={secretHex}
             onChange={(e) => setSecretHex(e.target.value)}
             className="w-full"
@@ -244,7 +262,7 @@ export default function CustomerPage() {
 
       {keypair && (
         <div className="flex flex-col items-center gap-6 border-t pt-4 w-full">
-                    <MyCards
+          <MyCards
             keypair={keypair}
             refreshKey={refreshKey}
             onChange={() => setRefreshKey((k) => k + 1)}

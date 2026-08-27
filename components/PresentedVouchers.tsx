@@ -88,21 +88,28 @@ export function PresentedVouchers({
 
   return (
     <div className="flex flex-col gap-2 w-full max-w-sm">
-      <p className="text-sm font-semibold">Presented vouchers</p>
-      {vouchers.map((v) => (
-        <div key={v.address} className="border rounded-lg p-3 flex justify-between items-center text-sm">
-          <div>
-            <p>Voucher #{v.voucherId}</p>
-            <p className="text-xs text-gray-500">
-              Owner {v.owner.slice(0, 4)}...{v.owner.slice(-4)}
-            </p>
+      <p className="font-mono text-xs uppercase tracking-wider text-charcoal/60">
+        Presented vouchers
+      </p>
+      <div className="border border-line rounded-lg divide-y divide-line bg-white/60">
+        {vouchers.map((v) => (
+          <div key={v.address} className="flex justify-between items-center px-3 py-2">
+            <div>
+              <p className="font-mono text-sm text-ink">Voucher #{v.voucherId}</p>
+              <p className="text-xs text-charcoal/50 font-mono">
+                {v.owner.slice(0, 4)}…{v.owner.slice(-4)}
+              </p>
+            </div>
+            <button
+              disabled={busy === v.address}
+              onClick={() => handleRedeem(v.address)}
+              className="bg-stamp-red text-paper rounded-md px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+            >
+              {busy === v.address ? "Redeeming…" : "Redeem"}
+            </button>
           </div>
-          <button disabled={busy === v.address} onClick={() => handleRedeem(v.address)}>
-            {busy === v.address ? "Redeeming..." : "Redeem"}
-          </button>
-        </div>
-      ))}
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+        ))}
+      </div>
     </div>
   );
 }

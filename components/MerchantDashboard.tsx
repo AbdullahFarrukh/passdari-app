@@ -1,5 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useProgram } from "@/lib/useProgram";
+
 type Business = {
   name: string;
   category: string;
@@ -10,10 +13,56 @@ type Business = {
   totalVouchersIssued: { toString: () => string };
 };
 
+type TopCustomer = {
+  address: string;
+  lifetimeStamps: number;
+  name: string | null;
+};
+
 export function MerchantDashboard({ business }: { business: Business }) {
+  const program = useProgram();
+  const [topCustomers, setTopCustomers] = useState<TopCustomer[] | null>(null);
+
   const stampsIssued = Number(business.totalStampsIssued.toString());
   const vouchersIssued = Number(business.totalVouchersIssued.toString());
   const vouchersPending = vouchersIssued - business.totalRedemptions;
+
+  useEffect(() => {
+    if (!program) return;
+
+    async function load() {
+      const allCards = await program!.account.loyaltyCard.all();
+
+      const sorted = allCards
+        .map((entry) => ({
+          address: (entry.account.customer as any).toBase58(),
+          lifetimeStamps: entry.account.lifetimeStamps as number,
+        }))
+        .sort((a, b) => b.lifetimeStamps - a.lifetimeStamps)
+        .slice(0, 5);
+
+      let names: Record<string, string> = {};
+      const addressList = sorted.map((c) => c.address).join(",");
+      if (addressList) {
+        try {
+          const res = await fetch(`/api/customer-name?addresses=${addressList}`);
+          const data = await res.json();
+          names = data.names ?? {};
+        } catch (err) {
+          console.error("Could not load customer names:", err);
+        }
+      }
+
+      setTopCustomers(
+        sorted.map((c) => ({
+          ...c,
+          name: names[c.address] ?? null,
+        }))
+      );
+    }
+
+    load();
+  }, [program]);
 
   return (
     <div className="w-full max-w-2xl flex flex-col gap-6">
@@ -42,6 +91,24 @@ export function MerchantDashboard({ business }: { business: Business }) {
           <p className="font-mono text-2xl font-semibold text-stamp-red">{vouchersPending}</p>
         </div>
       </div>
+
+      {topCustomers && topCustomers.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="font-mono text-xs uppercase tracking-wider text-charcoal/60">
+            Top loyal customers
+          </p>
+          <div className="border border-line rounded-lg divide-y divide-line bg-white/60">
+            {topCustomers.map((c, i) => (
+              <div key={c.address} className="flex justify-between items-center px-3 py-2 text-sm">
+                <span className="font-mono text-charcoal/70">
+                  {i + 1}. {c.name ?? `${c.address.slice(0, 4)}…${c.address.slice(-4)}`}
+                </span>
+                <span className="font-mono text-ink font-medium">{c.lifetimeStamps} stamps</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

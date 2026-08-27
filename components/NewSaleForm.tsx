@@ -72,12 +72,14 @@ export function NewSaleForm({
         })
         .rpc();
 
-            const hex = Array.from(secretBytes)
+      const hex = Array.from(secretBytes)
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
       const combinedCode = `${wallet.publicKey.toBase58()}:${hex}`;
-      const qrDataUrl = await QRCode.toDataURL(combinedCode);
+      const qrDataUrl = await QRCode.toDataURL(combinedCode, {
+        color: { dark: "#2A2724", light: "#EDE6D6" },
+      });
 
       setSecretHex(combinedCode);
       setQrImage(qrDataUrl);
@@ -97,26 +99,47 @@ export function NewSaleForm({
   return (
     <div className="w-full max-w-sm flex flex-col gap-3">
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <label>
+        <label className="text-sm text-charcoal/70">
           Purchase amount (PKR)
           <input
             type="number"
             min={1}
             value={amountPkr}
             onChange={(e) => setAmountPkr(Number(e.target.value))}
+            className="w-full border border-line rounded-md px-3 py-2 mt-1 bg-white/60 font-mono"
           />
         </label>
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Issuing..." : "New sale"}
+        {error && <p className="text-stamp-red text-sm">{error}</p>}
+        <button
+          type="submit"
+          disabled={submitting}
+          className="w-full bg-ink text-paper rounded-md py-2 text-sm font-medium disabled:opacity-50"
+        >
+          {submitting ? "Issuing…" : "New sale"}
         </button>
       </form>
 
       {qrImage && secretHex && (
-        <div className="flex flex-col items-center gap-2 border rounded-lg p-4">
-          <p className="text-sm text-green-700">Ready to scan</p>
-          <img src={qrImage} alt="Receipt QR code" width={180} height={180} />
-          <button type="button" onClick={handleCopy}>
+        <div className="flex flex-col items-center gap-3 border border-line rounded-lg p-4 bg-white/60">
+          <p className="text-sm text-quiet-green flex items-center gap-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            Ready to scan
+          </p>
+          <img
+            src={qrImage}
+            alt="Receipt QR code"
+            width={180}
+            height={180}
+            className="rounded-md border border-line"
+          />
+          <p className="text-xs text-charcoal/50">Or share the code below</p>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="border border-ink text-ink rounded-md px-4 py-1.5 text-sm"
+          >
             {copied ? "Copied" : "Copy code"}
           </button>
         </div>

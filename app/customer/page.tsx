@@ -45,6 +45,13 @@ export default function CustomerPage() {
       const { keypair: kp, mnemonic } = await signUp(username, password);
       setKeypair(kp);
       setNewMnemonic(mnemonic);
+
+      fetch("/api/customer-name", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: kp.publicKey.toBase58(), name: username }),
+      }).catch((err) => console.error("Could not save display name:", err));
+
     } catch (err) {
       console.error("Sign up failed:", err);
       setAuthError(err instanceof Error ? err.message : "Something went wrong");

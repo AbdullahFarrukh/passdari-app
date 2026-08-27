@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { useAnchorWallet } from "@solana/wallet-adapter-react";
+import { useAnchorWallet, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { useProgram } from "@/lib/useProgram";
 import { RegisterBusinessForm } from "@/components/RegisterBusinessForm";
@@ -21,6 +21,7 @@ const WalletMultiButton = dynamic(
 export default function Home() {
   const program = useProgram();
   const wallet = useAnchorWallet();
+  const { disconnect } = useWallet();
   const [myBusiness, setMyBusiness] = useState<any | null | "checking">("checking");
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -65,40 +66,51 @@ export default function Home() {
     checkForBusiness();
   }
 
+  async function handleSignOut() {
+    await disconnect();
+    setMyBusiness("checking");
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center gap-6 py-32 px-16 bg-white dark:bg-black">
-        <WalletMultiButton />
+    <div className="flex flex-col items-center min-h-screen gap-6 py-16 px-8 bg-paper text-charcoal">
+      <p className="font-mono text-lg text-ink">Loyalty — Merchant</p>
+      <WalletMultiButton />
 
-        {!wallet && <p>Connect a wallet to get started.</p>}
+      {!wallet && <p className="text-sm text-charcoal/60">Connect a wallet to get started.</p>}
 
-        {wallet && myBusiness === "checking" && <p>Checking your account...</p>}
+      {wallet && myBusiness === "checking" && (
+        <p className="text-sm text-charcoal/60 font-mono">Checking your account…</p>
+      )}
 
-        {wallet && myBusiness === null && (
-          <RegisterBusinessForm onDone={checkForBusiness} />
-        )}
+      {wallet && myBusiness === null && <RegisterBusinessForm onDone={checkForBusiness} />}
 
-        {wallet && myBusiness && myBusiness !== "checking" && (
-          <>
-            <MerchantDashboard business={myBusiness} />
-            <NewSaleForm
-              minPurchaseMinor={Number(myBusiness.minPurchaseAmount.toString())}
-              onDone={checkForBusiness}
-            />
-            <PresentedVouchers
-              wallet={wallet}
-              refreshKey={refreshKey}
-              onChange={() => {
-                setRefreshKey((k) => k + 1);
-                checkForBusiness();
-              }}
-            />
-            <button onClick={handleLowerThreshold} className="text-xs text-gray-500 underline">
-              Lower reward threshold to 1 (testing only)
-            </button>
-          </>
-        )}
-      </main>
+      {wallet && myBusiness && myBusiness !== "checking" && (
+        <>
+          <button className="text-xs text-charcoal/60 underline" onClick={handleSignOut}>
+            Sign out
+          </button>
+
+          <MerchantDashboard business={myBusiness} />
+
+          <NewSaleForm
+            minPurchaseMinor={Number(myBusiness.minPurchaseAmount.toString())}
+            onDone={checkForBusiness}
+          />
+
+          <PresentedVouchers
+            wallet={wallet}
+            refreshKey={refreshKey}
+            onChange={() => {
+              setRefreshKey((k) => k + 1);
+              checkForBusiness();
+            }}
+          />
+
+          <button onClick={handleLowerThreshold} className="text-xs text-charcoal/40 underline">
+            Lower reward threshold to 1 (testing only)
+          </button>
+        </>
+      )}
     </div>
   );
 }

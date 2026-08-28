@@ -5,6 +5,12 @@ import { Keypair, PublicKey } from "@solana/web3.js";
 import { signUp, signIn, recoverAccount } from "@/lib/merchantAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { RegisterBusinessForm } from "@/components/RegisterBusinessForm";
+import { MerchantDashboard } from "@/components/MerchantDashboard";
+import { NewSaleForm } from "@/components/NewSaleForm";
+import { PresentedVouchers } from "@/components/PresentedVouchers";
+import { MerchantCopilot } from "@/components/MerchantCopilot";
+
+const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
 export default function Home() {
   const [username, setUsername] = useState("");
@@ -20,6 +26,7 @@ export default function Home() {
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
 
   const [myBusiness, setMyBusiness] = useState<any | null | "checking">("checking");
+  const [refreshKey, setRefreshKey] = useState(0);
   const program = useCustomerProgram(keypair);
 
   const checkForBusiness = () => {
@@ -87,6 +94,34 @@ export default function Home() {
     setNewMnemonic(null);
     setAuthError(null);
     setMyBusiness("checking");
+  }
+
+  async function handleLowerThreshold() {
+    if (!program || !keypair || !myBusiness || myBusiness === "checking") return;
+
+    const [businessPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("business"), keypair.publicKey.toBuffer()],
+      program.programId
+    );
+
+    const tx = await program.methods
+      .updateBusinessConfig(myBusiness.rewardLabel, 1, myBusiness.minPurchaseAmount, myBusiness.receiptTtlSeconds)
+      .accounts({ business: businessPda, authority: keypair.publicKey })
+      .transaction();
+
+    tx.feePayer = RELAYER_PUBLIC_KEY;
+    const { blockhash } = await program.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+    tx.partialSign(keypair);
+
+    const serialized = tx.serialize({ requireAllSignatures: false }).toString("base64");
+    await fetch("/api/relay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transaction: serialized }),
+    });
+
+    checkForBusiness();
   }
 
   return (
@@ -169,7 +204,31 @@ export default function Home() {
       )}
 
       {keypair && myBusiness && myBusiness !== "checking" && (
-        <p className="text-sm">Welcome back, {myBusiness.name}. (Dashboard coming next.)</p>
+        <>
+          <MerchantDashboard program={program} business={myBusiness} />
+
+          <NewSaleForm
+            keypair={keypair}
+            minPurchaseMinor={Number(myBusiness.minPurchaseAmount.toString())}
+            onDone={checkForBusiness}
+          />
+
+          <MerchantCopilot ownerAddress={keypair.publicKey.toBase58()} />
+
+                    <PresentedVouchers
+            keypair={keypair}
+            refreshKey={refreshKey}
+            onChange={() => setRefreshKey((k) => k + 1)}
+            onRedeem={() => {
+              setRefreshKey((k) => k + 1);
+              checkForBusiness();
+            }}
+          />
+
+          <button onClick={handleLowerThreshold} className="text-xs text-charcoal/40 underline">
+            Lower reward threshold to 1 (testing only)
+          </button>
+        </>
       )}
     </div>
   );

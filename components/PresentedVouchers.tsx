@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PublicKey } from "@solana/web3.js";
-import { useProgram } from "@/lib/useProgram";
+import { Keypair, PublicKey } from "@solana/web3.js";
+import { useCustomerProgram } from "@/lib/customerProgram";
+
+const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
 type PresentedVoucher = {
   address: string;
@@ -11,15 +13,17 @@ type PresentedVoucher = {
 };
 
 export function PresentedVouchers({
-  wallet,
+  keypair,
   refreshKey,
   onChange,
+  onRedeem,
 }: {
-  wallet: { publicKey: PublicKey };
+  keypair: Keypair;
   refreshKey: number;
   onChange: () => void;
+  onRedeem: () => void;
 }) {
-  const program = useProgram();
+  const program = useCustomerProgram(keypair);
   const [vouchers, setVouchers] = useState<PresentedVoucher[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,17 +33,12 @@ export function PresentedVouchers({
 
     async function load() {
       const [businessPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("business"), wallet.publicKey.toBuffer()],
+        [Buffer.from("business"), keypair.publicKey.toBuffer()],
         program!.programId
       );
 
       const all = await program!.account.voucher.all([
-        {
-          memcmp: {
-            offset: 8,
-            bytes: businessPda.toBase58(),
-          },
-        },
+        { memcmp: { offset: 8, bytes: businessPda.toBase58() } },
       ]);
 
       const presented = all.filter((entry) => entry.account.pendingRedemption);
@@ -56,6 +55,13 @@ export function PresentedVouchers({
     load();
   }, [program, refreshKey]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      onChange();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   async function handleRedeem(voucherAddress: string) {
     if (!program) return;
     setError(null);
@@ -63,20 +69,34 @@ export function PresentedVouchers({
 
     try {
       const [businessPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("business"), wallet.publicKey.toBuffer()],
+        [Buffer.from("business"), keypair.publicKey.toBuffer()],
         program.programId
       );
 
-      await program.methods
+      const tx = await program.methods
         .redeemVoucher()
         .accounts({
           business: businessPda,
           voucher: new PublicKey(voucherAddress),
-          authority: wallet.publicKey,
+          authority: keypair.publicKey,
         })
-        .rpc();
+        .transaction();
 
-      onChange();
+      tx.feePayer = RELAYER_PUBLIC_KEY;
+      const { blockhash } = await program.provider.connection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.partialSign(keypair);
+
+      const serialized = tx.serialize({ requireAllSignatures: false }).toString("base64");
+      const res = await fetch("/api/relay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction: serialized }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+           onRedeem();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

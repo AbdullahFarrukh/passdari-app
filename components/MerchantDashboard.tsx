@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useProgram } from "@/lib/useProgram";
+import type { Program } from "@anchor-lang/core";
 
 type Business = {
   name: string;
@@ -19,8 +19,7 @@ type TopCustomer = {
   name: string | null;
 };
 
-export function MerchantDashboard({ business }: { business: Business }) {
-  const program = useProgram();
+export function MerchantDashboard({ program, business }: { program: Program | null; business: Business }) {
   const [topCustomers, setTopCustomers] = useState<TopCustomer[] | null>(null);
 
   const stampsIssued = Number(business.totalStampsIssued.toString());

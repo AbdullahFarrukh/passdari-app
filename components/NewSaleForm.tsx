@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useAnchorWallet } from "@solana/wallet-adapter-react";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { keccak256 } from "js-sha3";
 import QRCode from "qrcode";
-import { useProgram } from "@/lib/useProgram";
+import { useCustomerProgram } from "@/lib/customerProgram";
+
+const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
 function computeAmountBand(amountMinor: number, minPurchase: number): number {
   if (amountMinor < minPurchase) return 0;
@@ -15,14 +16,15 @@ function computeAmountBand(amountMinor: number, minPurchase: number): number {
 }
 
 export function NewSaleForm({
+  keypair,
   minPurchaseMinor,
   onDone,
 }: {
+  keypair: Keypair;
   minPurchaseMinor: number;
   onDone: () => void;
 }) {
-  const wallet = useAnchorWallet();
-  const program = useProgram();
+  const program = useCustomerProgram(keypair);
   const [amountPkr, setAmountPkr] = useState(1000);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export function NewSaleForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!program || !wallet) return;
+    if (!program) return;
 
     const amountMinor = amountPkr * 100;
     const band = computeAmountBand(amountMinor, minPurchaseMinor);
@@ -53,7 +55,7 @@ export function NewSaleForm({
       const secretHashBytes = keccak256.array(secretBytes);
 
       const [businessPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("business"), wallet.publicKey.toBuffer()],
+        [Buffer.from("business"), keypair.publicKey.toBuffer()],
         program.programId
       );
 
@@ -62,21 +64,36 @@ export function NewSaleForm({
         program.programId
       );
 
-      await program.methods
+      const tx = await program.methods
         .issueReceipt(secretHashBytes, band)
         .accounts({
           business: businessPda,
           receipt: receiptPda,
-          authority: wallet.publicKey,
+          authority: keypair.publicKey,
+          relayer: RELAYER_PUBLIC_KEY,
           systemProgram: SystemProgram.programId,
         })
-        .rpc();
+        .transaction();
+
+      tx.feePayer = RELAYER_PUBLIC_KEY;
+      const { blockhash } = await program.provider.connection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.partialSign(keypair);
+
+      const serialized = tx.serialize({ requireAllSignatures: false }).toString("base64");
+      const res = await fetch("/api/relay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction: serialized }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
 
       const hex = Array.from(secretBytes)
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
-      const combinedCode = `${wallet.publicKey.toBase58()}:${hex}`;
+      const combinedCode = `${keypair.publicKey.toBase58()}:${hex}`;
       const qrDataUrl = await QRCode.toDataURL(combinedCode, {
         color: { dark: "#2A2724", light: "#EDE6D6" },
       });

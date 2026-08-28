@@ -126,40 +126,58 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-paper text-charcoal flex flex-col items-center py-10 px-8 gap-6">
-      <p className="font-mono text-lg text-ink">StampCoin — Merchant</p>
-
       {!keypair && (
-        <div className="flex flex-col items-center gap-2">
-          <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
+        <div className="flex flex-col items-center gap-2 w-full max-w-sm mt-16">
+          <p className="font-mono text-lg text-ink mb-2">StampCoin — Merchant</p>
+          <input
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
+          />
           <input
             placeholder="Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
           />
-          <div className="flex gap-2">
-            <button onClick={handleSignUp}>Sign up</button>
-            <button onClick={handleSignIn}>Sign in</button>
+          <div className="flex gap-2 w-full">
+            <button
+              className="flex-1 bg-ink text-paper rounded-md py-2 text-sm font-medium"
+              onClick={handleSignUp}
+            >
+              Sign up
+            </button>
+            <button
+              className="flex-1 border border-ink text-ink rounded-md py-2 text-sm font-medium"
+              onClick={handleSignIn}
+            >
+              Sign in
+            </button>
           </div>
-          <button className="text-xs text-charcoal/60 underline" onClick={() => setShowRecovery((s) => !s)}>
+          <button
+            className="text-xs text-charcoal/60 underline"
+            onClick={() => setShowRecovery((s) => !s)}
+          >
             Forgot password?
           </button>
           {authError && <p className="text-stamp-red text-sm">{authError}</p>}
 
           {showRecovery && (
-            <div className="flex flex-col items-center gap-2 border-t pt-4 w-full mt-2">
-              <p className="text-sm font-semibold">Recover your account</p>
+            <div className="flex flex-col items-center gap-2 border-t border-line pt-4 w-full mt-2">
+              <p className="text-sm font-semibold text-ink">Recover your account</p>
               <input
                 placeholder="Username to recover"
                 value={recoveryUsername}
                 onChange={(e) => setRecoveryUsername(e.target.value)}
-                className="w-full"
+                className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
               />
               <textarea
                 placeholder="Your 12-word phrase"
                 value={recoveryPhrase}
                 onChange={(e) => setRecoveryPhrase(e.target.value)}
-                className="w-full"
+                className="w-full border border-line rounded-md px-3 py-2 bg-white/60 font-mono text-sm"
                 rows={2}
               />
               <input
@@ -167,9 +185,14 @@ export default function Home() {
                 type="password"
                 value={recoveryPassword}
                 onChange={(e) => setRecoveryPassword(e.target.value)}
-                className="w-full"
+                className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
               />
-              <button onClick={handleRecover}>Recover account</button>
+              <button
+                className="w-full bg-ink text-paper rounded-md py-2 text-sm font-medium"
+                onClick={handleRecover}
+              >
+                Recover account
+              </button>
               {recoveryError && <p className="text-stamp-red text-sm">{recoveryError}</p>}
             </div>
           )}
@@ -187,7 +210,7 @@ export default function Home() {
       )}
 
       {newMnemonic && (
-        <div className="border-2 border-stamp-red rounded-lg p-3 max-w-sm text-sm">
+        <div className="border-2 border-stamp-red rounded-lg p-3 max-w-sm text-sm bg-white/60">
           <p className="font-semibold text-stamp-red mb-2">
             Write these 12 words down now. This is the only time they will ever be shown.
           </p>
@@ -215,7 +238,7 @@ export default function Home() {
 
           <MerchantCopilot ownerAddress={keypair.publicKey.toBase58()} />
 
-                    <PresentedVouchers
+          <PresentedVouchers
             keypair={keypair}
             refreshKey={refreshKey}
             onChange={() => setRefreshKey((k) => k + 1)}

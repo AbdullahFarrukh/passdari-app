@@ -53,19 +53,39 @@ export function MyVouchers({
     load();
   }, [program, refreshKey]);
 
+  const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
+
+  async function relaySign(tx: any) {
+    tx.feePayer = RELAYER_PUBLIC_KEY;
+    const { blockhash } = await program!.provider.connection.getLatestBlockhash();
+    tx.recentBlockhash = blockhash;
+    tx.partialSign(keypair);
+
+    const serialized = tx.serialize({ requireAllSignatures: false }).toString("base64");
+    const res = await fetch("/api/relay", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transaction: serialized }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+  }
+
   async function handlePresent(voucherAddress: string) {
     if (!program) return;
     setError(null);
     setBusy(voucherAddress);
 
     try {
-      await program.methods
+      const tx = await program.methods
         .presentVoucher()
         .accounts({
           voucher: new PublicKey(voucherAddress),
           owner: keypair.publicKey,
         })
-        .rpc();
+        .transaction();
+
+      await relaySign(tx);
       onChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -74,19 +94,21 @@ export function MyVouchers({
     }
   }
 
-  async function handleCancel(voucherAddress: string) {
+    async function handleCancel(voucherAddress: string) {
     if (!program) return;
     setError(null);
     setBusy(voucherAddress);
 
     try {
-      await program.methods
+      const tx = await program.methods
         .cancelPresentation()
         .accounts({
           voucher: new PublicKey(voucherAddress),
           owner: keypair.publicKey,
         })
-        .rpc();
+        .transaction();
+
+      await relaySign(tx);
       onChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -95,20 +117,22 @@ export function MyVouchers({
     }
   }
 
-  async function handleGift(voucherAddress: string, recipient: string) {
+    async function handleGift(voucherAddress: string, recipient: string) {
     if (!program) return;
     setError(null);
     setBusy(voucherAddress);
 
     try {
       const newOwner = new PublicKey(recipient);
-      await program.methods
+      const tx = await program.methods
         .transferVoucher(newOwner)
         .accounts({
           voucher: new PublicKey(voucherAddress),
           owner: keypair.publicKey,
         })
-        .rpc();
+        .transaction();
+
+      await relaySign(tx);
       onChange();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

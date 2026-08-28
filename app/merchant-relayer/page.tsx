@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { useState } from "react";
+import { Keypair } from "@solana/web3.js";
 import { signUp, signIn, recoverAccount } from "@/lib/merchantAuth";
-import { useCustomerProgram } from "@/lib/customerProgram";
-import { RegisterBusinessForm } from "@/components/RegisterBusinessForm";
 
-export default function Home() {
+export default function MerchantRelayerTestPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [keypair, setKeypair] = useState<Keypair | null>(null);
@@ -18,26 +16,6 @@ export default function Home() {
   const [recoveryPhrase, setRecoveryPhrase] = useState("");
   const [recoveryPassword, setRecoveryPassword] = useState("");
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
-
-  const [myBusiness, setMyBusiness] = useState<any | null | "checking">("checking");
-  const program = useCustomerProgram(keypair);
-
-  const checkForBusiness = () => {
-    if (!program || !keypair) return;
-    setMyBusiness("checking");
-
-    const [businessPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("business"), keypair.publicKey.toBuffer()],
-      program.programId
-    );
-
-    program.account.business
-      .fetch(businessPda)
-      .then((account) => setMyBusiness(account))
-      .catch(() => setMyBusiness(null));
-  };
-
-  useEffect(checkForBusiness, [program, keypair]);
 
   async function handleSignUp() {
     setAuthError(null);
@@ -57,7 +35,8 @@ export default function Home() {
     setAuthError(null);
     setKeypair(null);
     try {
-      setKeypair(await signIn(username, password));
+      const kp = await signIn(username, password);
+      setKeypair(kp);
     } catch (err) {
       console.error("Sign in failed:", err);
       setAuthError("Incorrect username or password.");
@@ -86,15 +65,13 @@ export default function Home() {
     setPassword("");
     setNewMnemonic(null);
     setAuthError(null);
-    setMyBusiness("checking");
   }
 
   return (
-    <div className="min-h-screen bg-paper text-charcoal flex flex-col items-center py-10 px-8 gap-6">
-      <p className="font-mono text-lg text-ink">StampCoin — Merchant</p>
-
+    <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-8">
       {!keypair && (
         <div className="flex flex-col items-center gap-2">
+          <p className="text-sm font-semibold">Merchant sign-up (no wallet extension)</p>
           <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
           <input
             placeholder="Password"
@@ -106,10 +83,10 @@ export default function Home() {
             <button onClick={handleSignUp}>Sign up</button>
             <button onClick={handleSignIn}>Sign in</button>
           </div>
-          <button className="text-xs text-charcoal/60 underline" onClick={() => setShowRecovery((s) => !s)}>
+          <button className="text-xs text-gray-500 underline" onClick={() => setShowRecovery((s) => !s)}>
             Forgot password?
           </button>
-          {authError && <p className="text-stamp-red text-sm">{authError}</p>}
+          {authError && <p className="text-red-600 text-sm">{authError}</p>}
 
           {showRecovery && (
             <div className="flex flex-col items-center gap-2 border-t pt-4 w-full mt-2">
@@ -135,41 +112,29 @@ export default function Home() {
                 className="w-full"
               />
               <button onClick={handleRecover}>Recover account</button>
-              {recoveryError && <p className="text-stamp-red text-sm">{recoveryError}</p>}
+              {recoveryError && <p className="text-red-600 text-sm">{recoveryError}</p>}
             </div>
           )}
         </div>
       )}
 
       {keypair && (
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-sm font-medium">Signed in as {username}</p>
-          <p className="text-xs text-charcoal/50 font-mono">{keypair.publicKey.toBase58()}</p>
-          <button className="text-xs text-charcoal/60 underline" onClick={handleSignOut}>
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-sm font-semibold">Signed in as {username}</p>
+          <p className="text-xs text-gray-500">{keypair.publicKey.toBase58()}</p>
+          <button className="text-xs text-gray-500 underline" onClick={handleSignOut}>
             Sign out
           </button>
         </div>
       )}
 
       {newMnemonic && (
-        <div className="border-2 border-stamp-red rounded-lg p-3 max-w-sm text-sm">
-          <p className="font-semibold text-stamp-red mb-2">
+        <div className="border-2 border-red-500 rounded-lg p-3 max-w-sm text-sm">
+          <p className="font-semibold text-red-600 mb-2">
             Write these 12 words down now. This is the only time they will ever be shown.
           </p>
           <p className="font-mono break-words">{newMnemonic}</p>
         </div>
-      )}
-
-      {keypair && myBusiness === "checking" && (
-        <p className="text-sm text-charcoal/60 font-mono">Checking your account…</p>
-      )}
-
-      {keypair && myBusiness === null && (
-        <RegisterBusinessForm keypair={keypair} onDone={checkForBusiness} />
-      )}
-
-      {keypair && myBusiness && myBusiness !== "checking" && (
-        <p className="text-sm">Welcome back, {myBusiness.name}. (Dashboard coming next.)</p>
       )}
     </div>
   );

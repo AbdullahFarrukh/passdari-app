@@ -55,10 +55,7 @@ export type Loyalty = {
       "accounts": [
         {
           "name": "business",
-          "writable": true,
-          "relations": [
-            "receipt"
-          ]
+          "writable": true
         },
         {
           "name": "receipt",
@@ -91,6 +88,18 @@ export type Loyalty = {
         },
         {
           "name": "customer",
+          "docs": [
+            "The customer authorizing this claim. Signs to prove it's really them,",
+            "but pays nothing — the relayer covers rent and fees instead."
+          ],
+          "signer": true
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "The relayer, paying rent and fees on the customer's behalf so the",
+            "customer never needs to hold SOL."
+          ],
           "writable": true,
           "signer": true
         },
@@ -228,11 +237,23 @@ export type Loyalty = {
         },
         {
           "name": "authority",
-          "writable": true,
+          "docs": [
+            "The merchant issuing this receipt. Signs to prove it's really them",
+            "and to satisfy the has_one check above, but pays nothing."
+          ],
           "signer": true,
           "relations": [
             "business"
           ]
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "The relayer, covering the receipt account's rent on the merchant's",
+            "behalf."
+          ],
+          "writable": true,
+          "signer": true
         },
         {
           "name": "systemProgram",
@@ -327,6 +348,17 @@ export type Loyalty = {
         },
         {
           "name": "customer",
+          "docs": [
+            "The customer converting their stamps into a voucher. Signs to",
+            "authorize it, but pays nothing."
+          ],
+          "signer": true
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "The relayer, covering the voucher's rent on the customer's behalf."
+          ],
           "writable": true,
           "signer": true
         },
@@ -499,6 +531,19 @@ export type Loyalty = {
         },
         {
           "name": "authority",
+          "docs": [
+            "The merchant registering this business. Signs to prove it's really",
+            "them — their identity is baked directly into the business's own",
+            "address — but pays nothing."
+          ],
+          "signer": true
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "The relayer, covering the business account's rent on the merchant's",
+            "behalf."
+          ],
           "writable": true,
           "signer": true
         },

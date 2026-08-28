@@ -96,6 +96,8 @@ export default function CustomerPage() {
     setCardCount(0);
   }
 
+    const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
+
   async function handleClaim() {
     if (!program || !keypair) return;
     setClaimError(null);
@@ -129,16 +131,32 @@ export default function CustomerPage() {
         program.programId
       );
 
-      await program.methods
+      const tx = await program.methods
         .claimReceipt(Array.from(secretBytes))
         .accounts({
           business: businessPda,
           receipt: receiptPda,
           card: cardPda,
           customer: keypair.publicKey,
+          relayer: RELAYER_PUBLIC_KEY,
           systemProgram: SystemProgram.programId,
         })
-        .rpc();
+        .transaction();
+
+      tx.feePayer = RELAYER_PUBLIC_KEY;
+      const { blockhash } = await program.provider.connection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.partialSign(keypair);
+
+      const serialized = tx.serialize({ requireAllSignatures: false }).toString("base64");
+
+      const res = await fetch("/api/relay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction: serialized }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
 
       setSecretHex("");
       setRefreshKey((k) => k + 1);

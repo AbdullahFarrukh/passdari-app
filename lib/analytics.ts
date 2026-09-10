@@ -34,9 +34,20 @@ export async function getBusinessAnalytics(ownerAddress: string) {
         if (!decoded || decoded.name !== "StampClaimed") continue;
         if (decoded.data.business.toBase58() !== businessPda.toBase58()) continue;
 
+                let rawTimestamp = Number(decoded.data.timestamp.toString());
+
+        // A genuine Unix timestamp in seconds won't exceed this for
+        // centuries. If it does, it was almost certainly stored as
+        // milliseconds by mistake — likely from a Surfpool time-travel
+        // call whose units weren't converted correctly on-chain — so
+        // correct it here rather than trust it blindly.
+        if (rawTimestamp > 100_000_000_000) {
+          rawTimestamp = Math.floor(rawTimestamp / 1000);
+        }
+
         claims.push({
           customer: decoded.data.customer.toBase58(),
-          timestamp: Number(decoded.data.timestamp.toString()),
+          timestamp: rawTimestamp,
         });
       } catch {
         // Not a StampClaimed event — skip.

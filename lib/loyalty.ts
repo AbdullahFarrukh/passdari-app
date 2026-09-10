@@ -426,11 +426,19 @@ export type Loyalty = {
         },
         {
           "name": "authority",
-          "writable": true,
           "signer": true,
           "relations": [
             "business"
           ]
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "The relayer, receiving back the rent it originally paid to create",
+            "this receipt — not the merchant, who never paid for it."
+          ],
+          "writable": true,
+          "signer": true
         }
       ],
       "args": []
@@ -950,6 +958,10 @@ export type Loyalty = {
           {
             "name": "redemptions",
             "type": "u32"
+          },
+          {
+            "name": "stampsRequiredSnapshot",
+            "type": "u8"
           },
           {
             "name": "bump",

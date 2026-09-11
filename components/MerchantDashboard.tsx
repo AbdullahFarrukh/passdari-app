@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Program } from "@anchor-lang/core";
+import { Keypair, PublicKey } from "@solana/web3.js";
 
 type Business = {
   name: string;
@@ -19,7 +20,15 @@ type TopCustomer = {
   name: string | null;
 };
 
-export function MerchantDashboard({ program, business }: { program: Program | null; business: Business }) {
+export function MerchantDashboard({
+  program,
+  business,
+  keypair,
+}: {
+  program: Program | null;
+  business: Business;
+  keypair: Keypair;
+}) {
   const [topCustomers, setTopCustomers] = useState<TopCustomer[] | null>(null);
 
   const stampsIssued = Number(business.totalStampsIssued.toString());
@@ -30,20 +39,14 @@ export function MerchantDashboard({ program, business }: { program: Program | nu
     if (!program) return;
 
     async function load() {
-      const allCards = await program!.account.loyaltyCard.all();
+      const [businessPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("business"), keypair.publicKey.toBuffer()],
+        program!.programId
+      );
 
-            console.log("All cards found:", allCards.length);
-      allCards.forEach((entry) => {
-        console.log(
-          "Card —",
-          (entry.account.customer as any).toBase58(),
-          "redemptions:",
-          entry.account.redemptions,
-          "(type:",
-          typeof entry.account.redemptions,
-          ")"
-        );
-      });
+      const allCards = await program!.account.loyaltyCard.all([
+        { memcmp: { offset: 8, bytes: businessPda.toBase58() } },
+      ]);
 
       const sorted = allCards
         .map((entry) => ({
@@ -75,7 +78,7 @@ export function MerchantDashboard({ program, business }: { program: Program | nu
     }
 
     load();
-  }, [program]);
+  }, [program, keypair]);
 
   return (
     <div className="w-full max-w-2xl flex flex-col gap-6">

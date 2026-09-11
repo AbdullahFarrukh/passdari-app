@@ -229,7 +229,7 @@ export default function MerchantPage() {
 
       {keypair && myBusiness && myBusiness !== "checking" && (
         <>
-          <MerchantDashboard program={program} business={myBusiness} />
+          <MerchantDashboard program={program} business={myBusiness} keypair={keypair} />
 
           <NewSaleForm
             keypair={keypair}

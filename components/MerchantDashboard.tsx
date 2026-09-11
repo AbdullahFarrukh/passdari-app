@@ -15,7 +15,7 @@ type Business = {
 
 type TopCustomer = {
   address: string;
-  lifetimeStamps: number;
+  redemptions: number;
   name: string | null;
 };
 
@@ -32,12 +32,26 @@ export function MerchantDashboard({ program, business }: { program: Program | nu
     async function load() {
       const allCards = await program!.account.loyaltyCard.all();
 
+            console.log("All cards found:", allCards.length);
+      allCards.forEach((entry) => {
+        console.log(
+          "Card —",
+          (entry.account.customer as any).toBase58(),
+          "redemptions:",
+          entry.account.redemptions,
+          "(type:",
+          typeof entry.account.redemptions,
+          ")"
+        );
+      });
+
       const sorted = allCards
         .map((entry) => ({
           address: (entry.account.customer as any).toBase58(),
-          lifetimeStamps: entry.account.lifetimeStamps as number,
+          redemptions: entry.account.redemptions as number,
         }))
-        .sort((a, b) => b.lifetimeStamps - a.lifetimeStamps)
+        .filter((c) => c.redemptions > 0)
+        .sort((a, b) => b.redemptions - a.redemptions)
         .slice(0, 5);
 
       let names: Record<string, string> = {};
@@ -102,7 +116,9 @@ export function MerchantDashboard({ program, business }: { program: Program | nu
                 <span className="font-mono text-charcoal/70">
                   {i + 1}. {c.name ?? `${c.address.slice(0, 4)}…${c.address.slice(-4)}`}
                 </span>
-                <span className="font-mono text-ink font-medium">{c.lifetimeStamps} stamps</span>
+                <span className="font-mono text-ink font-medium">
+                  {c.redemptions} reward{c.redemptions === 1 ? "" : "s"}
+                </span>
               </div>
             ))}
           </div>

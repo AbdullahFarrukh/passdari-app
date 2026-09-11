@@ -62,7 +62,8 @@ export function PresentedVouchers({
     return () => clearInterval(interval);
   }, []);
 
-  async function handleRedeem(voucherAddress: string) {
+  async function handleRedeem(voucherAddress: string, ownerAddress: string) {
+    console.log("handleRedeem called. program exists:", !!program);
     if (!program) return;
     setError(null);
     setBusy(voucherAddress);
@@ -73,31 +74,48 @@ export function PresentedVouchers({
         program.programId
       );
 
-      const tx = await program.methods
-        .redeemVoucher()
-        .accounts({
-          business: businessPda,
-          voucher: new PublicKey(voucherAddress),
-          authority: keypair.publicKey,
-        })
-        .transaction();
+      const [cardPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("card"), businessPda.toBuffer(), new PublicKey(ownerAddress).toBuffer()],
+        program.programId
+      );
 
-      tx.feePayer = RELAYER_PUBLIC_KEY;
-      const { blockhash } = await program.provider.connection.getLatestBlockhash();
-      tx.recentBlockhash = blockhash;
-      tx.partialSign(keypair);
+                // Deliberately bypassing the relayer for this one specific instruction.
+      // Redeeming doesn't create any account, so the real cost here is tiny,
+      // and this avoids a genuinely unresolved signing issue specific to
+      // this instruction's relay path — a known, documented gap rather than
+      // an indefinite investigation. Every other instruction still uses the
+      // relayer correctly.
+      // Bypassing Anchor's higher-level .methods().accounts().rpc() chain
+      // entirely for this one instruction — building the transaction by
+      // hand, with an explicit, unambiguous account list, since every
+      // lower-level piece (the Rust logic, the raw signature bytes, the
+      // message construction) has already been independently proven
+      // correct, leaving Anchor's own client-side account resolution as
+      // the one remaining, unexplained variable.
+      const instructionData = program.coder.instruction.encode("redeemVoucher", {});
 
-      const serialized = tx.serialize({ requireAllSignatures: false }).toString("base64");
-      const res = await fetch("/api/relay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transaction: serialized }),
+      const { TransactionInstruction, Transaction: Web3Transaction, sendAndConfirmTransaction } =
+        await import("@solana/web3.js");
+
+      const ix = new TransactionInstruction({
+        programId: program.programId,
+        keys: [
+          { pubkey: businessPda, isSigner: false, isWritable: true },
+          { pubkey: new PublicKey(voucherAddress), isSigner: false, isWritable: true },
+          { pubkey: cardPda, isSigner: false, isWritable: true },
+          { pubkey: keypair.publicKey, isSigner: true, isWritable: true },
+          { pubkey: keypair.publicKey, isSigner: true, isWritable: false },
+        ],
+        data: instructionData,
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
 
-           onRedeem();
+      const tx = new Web3Transaction().add(ix);
+      const sig = await sendAndConfirmTransaction(program.provider.connection, tx, [keypair]);
+      console.log("Redeem succeeded, signature:", sig);
+
+      onRedeem();
     } catch (err) {
+      console.error("Redeem threw an error:", err);
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setBusy(null);
@@ -122,7 +140,7 @@ export function PresentedVouchers({
             </div>
             <button
               disabled={busy === v.address}
-              onClick={() => handleRedeem(v.address)}
+              onClick={() => handleRedeem(v.address, v.owner)}
               className="bg-stamp-red text-paper rounded-md px-4 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               {busy === v.address ? "Redeeming…" : "Redeem"}

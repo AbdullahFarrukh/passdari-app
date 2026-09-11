@@ -16,28 +16,23 @@ export async function POST(request: NextRequest) {
     const { transaction } = await request.json();
     const tx = Transaction.from(Buffer.from(transaction, "base64"));
 
-    // The exact message bytes both signers must sign against.
+    // Never call partialSign here, for either signer — it recompiles the
+    // message from scratch on every call, which can silently invalidate an
+    // already-attached signature once a transaction has been through a
+    // serialize/deserialize round trip. Compute both signatures directly
+    // against the same frozen message bytes instead, and insert both with
+    // addSignature, which just places bytes without recompiling anything.
     const messageBytes = tx.serializeMessage();
 
-    // Find the customer's already-present signature — used exactly as
-    // received, never recomputed.
-    const customerEntry = tx.signatures.find(
+    const realSignerEntry = tx.signatures.find(
       (s) => s.publicKey.toBase58() !== relayer.publicKey.toBase58()
     );
-    if (!customerEntry?.signature) {
-      throw new Error("Customer signature missing from the received transaction");
+    if (!realSignerEntry?.signature) {
+      throw new Error("Real signer's signature missing from the received transaction");
     }
 
-    // Compute the relayer's own signature against that exact same message.
     const relayerSignature = Buffer.from(nacl.sign.detached(messageBytes, relayer.secretKey));
 
-    // Build the final wire-format transaction by hand: a signature-count
-    // byte, each signature in the order the message expects, then the raw
-    // message bytes — never touched by any automatic recompilation.
-    // Transaction.serialize() has its own internal logic for reassembling
-    // this, and after a deserialize-and-mutate cycle, that reassembly can
-    // silently diverge from the exact bytes each signature was actually
-    // computed against, even when each individual signature is correct.
     const signatureBuffers = tx.signatures.map((s) =>
       s.publicKey.toBase58() === relayer.publicKey.toBase58()
         ? relayerSignature
@@ -51,7 +46,22 @@ export async function POST(request: NextRequest) {
     ]);
 
     const signature = await connection.sendRawTransaction(wireTransaction);
-    await connection.confirmTransaction(signature, "confirmed");
+
+    const latestBlockhash = await connection.getLatestBlockhash();
+    const confirmation = await connection.confirmTransaction(
+      {
+        signature,
+        blockhash: latestBlockhash.blockhash,
+        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+      },
+      "confirmed"
+    );
+
+    if (confirmation.value.err) {
+      throw new Error(
+        `Transaction was included but failed on-chain: ${JSON.stringify(confirmation.value.err)}`
+      );
+    }
 
     return NextResponse.json({ signature });
   } catch (err) {

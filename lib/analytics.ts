@@ -1,6 +1,7 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { BorshCoder } from "@anchor-lang/core";
 import idl from "./loyalty.json";
+import { getCustomerNames } from "./db";
 
 const PROGRAM_ID = new PublicKey("HWvvvwSEounpNXcbD4JUNmniB5YxTcFNYoAestzJJCuL");
 const connection = new Connection("http://127.0.0.1:8899");
@@ -83,11 +84,25 @@ export async function getBusinessAnalytics(ownerAddress: string) {
   for (const { account } of cardAccounts) {
     try {
       const card: any = coder.accounts.decode("LoyaltyCard", account.data);
-      if (card.stamps === stampsRequired - 1) oneStampAway++;
+          if (card.stamps === card.stamps_required_snapshot - 1) oneStampAway++;
+    if (card.stamps === card.stampsRequiredSnapshot - 1) oneStampAway++;
     } catch {
       // Not a LoyaltyCard account — skip.
     }
   }
+
+   const topWallets = Object.entries(claimsPerWallet)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([address, claims]) => ({ address, claims }));
+
+  const names = await getCustomerNames(topWallets.map((w) => w.address));
+
+  const topCustomersByClaims = topWallets.map((w) => ({
+    name: names[w.address] ?? null,
+    address: w.address,
+    claims: w.claims,
+  }));
 
   return {
     businessName: business.name as string,
@@ -98,5 +113,6 @@ export async function getBusinessAnalytics(ownerAddress: string) {
     hourDistribution,
     claimsPerWallet,
     customersOneStampAway: oneStampAway,
+    topCustomersByClaims,
   };
 }

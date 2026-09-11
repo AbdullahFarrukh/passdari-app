@@ -489,12 +489,48 @@ export type Loyalty = {
           "writable": true
         },
         {
+          "name": "card",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "business"
+              },
+              {
+                "kind": "account",
+                "path": "voucher.owner",
+                "account": "voucher"
+              }
+            ]
+          }
+        },
+        {
           "name": "authority",
           "writable": true,
           "signer": true,
           "relations": [
             "business"
           ]
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "Present purely as a required signer, matching every other",
+            "relayer-backed instruction's structure — not used inside the",
+            "handler itself, since redeeming doesn't create any account or need",
+            "a payer."
+          ],
+          "signer": true
         }
       ],
       "args": []

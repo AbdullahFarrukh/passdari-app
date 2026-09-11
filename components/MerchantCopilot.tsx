@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-type Message = { role: "user" | "assistant"; text: string };
+type Message = { role: "user" | "assistant"; text: string; usedFallback?: boolean };
+
+const SUGGESTED_QUESTIONS = [
+  "Who's closest to a reward?",
+  "When are we busiest?",
+  "Is anything anomalous this week?",
+];
 
 export function MerchantCopilot({ ownerAddress }: { ownerAddress: string }) {
   const [open, setOpen] = useState(false);
@@ -11,11 +17,9 @@ export function MerchantCopilot({ ownerAddress }: { ownerAddress: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleAsk(e: React.FormEvent) {
-    e.preventDefault();
-    if (!question.trim()) return;
+  async function ask(q: string) {
+    if (!q.trim()) return;
 
-    const q = question;
     setMessages((prev) => [...prev, { role: "user", text: q }]);
     setQuestion("");
     setLoading(true);
@@ -32,13 +36,18 @@ export function MerchantCopilot({ ownerAddress }: { ownerAddress: string }) {
       if (data.error) {
         setError(data.error);
       } else {
-        setMessages((prev) => [...prev, { role: "assistant", text: data.answer }]);
+        setMessages((prev) => [...prev, { role: "assistant", text: data.answer, usedFallback: data.usedFallback }]);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleAsk(e: React.FormEvent) {
+    e.preventDefault();
+    ask(question);
   }
 
   return (
@@ -56,9 +65,18 @@ export function MerchantCopilot({ ownerAddress }: { ownerAddress: string }) {
 
           <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
             {messages.length === 0 && (
-              <p className="text-sm text-charcoal/50">
-                Try: "How many repeat customers do I have?" or "How close is anyone to a reward?"
-              </p>
+              <div className="flex flex-col gap-1.5">
+                <p className="text-sm text-charcoal/50 mb-1">Try one of these:</p>
+                {SUGGESTED_QUESTIONS.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => ask(q)}
+                    className="text-left text-sm border border-line rounded-md px-2 py-1.5 hover:bg-paper"
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
             )}
             {messages.map((m, i) => (
               <div
@@ -68,6 +86,11 @@ export function MerchantCopilot({ ownerAddress }: { ownerAddress: string }) {
                 }`}
               >
                 {m.text}
+                {m.usedFallback && (
+                  <p className="text-xs text-stamp-red mt-1">
+                    (Live AI was unavailable — this is a plain-data answer, not an AI response.)
+                  </p>
+                )}
               </div>
             ))}
             {loading && <p className="text-sm text-charcoal/50 font-mono">Thinking…</p>}

@@ -25,8 +25,8 @@ export function translateError(err: unknown): string {
     return anchorMatch[1];
   }
 
-  if (raw.includes("no record of a prior credit")) {
-    return "Something went wrong on our end — please try again in a moment.";
+    if (raw.includes("no record of a prior credit")) {
+    return "⚠ Our payment service is temporarily unavailable. This isn't something you did — please try again in a few minutes, or let the business know directly.";
   }
 
   if (raw.includes("Failed to fetch") || raw.includes("NetworkError")) {

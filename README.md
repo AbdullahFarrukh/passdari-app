@@ -73,4 +73,13 @@ The one piece of this app that isn't purely on-chain: a small SQLite database ma
 - The relay endpoint currently trusts anything it's asked to sign — no rate-limiting or instruction validation yet.
 - The AI copilot's live-fallback templates only cover its three fixed questions; a freely-typed question that fails gets an honest "temporarily unavailable" message instead.
 - Purchase-band distribution (small/medium/large) isn't available to the AI copilot — the exact band is discarded once a receipt is claimed, by design, for customer privacy.
+
+## The relayer's operational story
+
+The relayer's real secret key lives in `relayer-keypair.json`, a plain file sitting in this project's root, read directly off disk (`fs.readFileSync`) by `/api/relay/route.ts`. It's git-ignored, so it never leaves this machine — but this is genuinely a local-development pattern, not a production one. Before ever deploying this app anywhere real, that file would need to move into a proper secret store (a platform's own environment variables, at minimum, ideally a real secrets manager) — reading a plain file off disk is not something a deployed serverless function should be trusted to do with a real key.
+
+**Nobody currently monitors the relayer's balance.** If it runs dry, every single action across both the merchant and customer sides stops at once — this is by design load-bearing infrastructure, not a per-feature dependency. Before any real demo: fund it well above what the session could plausibly need, and check its actual balance the same morning, rather than trust it was still funded from an earlier session.
+
+**What the app shows if it happens anyway:** every component routes its errors through `lib/errorMessages.ts`, and a genuinely empty relayer gets its own distinct message — clearly different in tone from an ordinary mistake, explicitly telling the person "this isn't something you did." It's a real, visible message either way, never a silent hang — but it's still a full outage, not something the app can route around on its own.
+
 - Both `lib/customerProgram.ts` and `lib/analytics.ts` currently point at `127.0.0.1:8899` directly — these are the places that would need updating before pointing this app at devnet instead of a local validator.

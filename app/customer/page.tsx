@@ -1,15 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+import { useState, useEffect } from "react";
+import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { signUp, signIn, recoverAccount } from "@/lib/customerAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
+import { translateError } from "@/lib/errorMessages";
 import { MyCards } from "@/components/MyCards";
 import { MyVouchers } from "@/components/MyVouchers";
 import { BusinessDirectory } from "@/components/BusinessDirectory";
 import { QrScanner } from "@/components/QrScanner";
-import { translateError } from "@/lib/errorMessages";
 
+const CLOCK_SYSVAR = new PublicKey("SysvarC1ock11111111111111111111111111111111");
+
+async function getOnChainNow(connection: Connection): Promise<number> {
+  const accountInfo = await connection.getAccountInfo(CLOCK_SYSVAR);
+  if (!accountInfo) throw new Error("Could not read the on-chain clock");
+  // The Clock sysvar's unix_timestamp is an i64, little-endian, at byte offset 32.
+  return Number(accountInfo.data.readBigInt64LE(32));
+}
 
 export default function CustomerPage() {
   const [username, setUsername] = useState("");
@@ -27,6 +35,7 @@ export default function CustomerPage() {
   const [secretHex, setSecretHex] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
+  const [expiresInfo, setExpiresInfo] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [cardCount, setCardCount] = useState(0);
 
@@ -53,7 +62,6 @@ export default function CustomerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address: kp.publicKey.toBase58(), name: username }),
       }).catch((err) => console.error("Could not save display name:", err));
-
     } catch (err) {
       console.error("Sign up failed:", err);
       setAuthError(err instanceof Error ? err.message : "Something went wrong");
@@ -98,7 +106,65 @@ export default function CustomerPage() {
     setCardCount(0);
   }
 
-    const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
+  const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
+
+  // Runs automatically whenever the code field changes — whether typed,
+  // pasted, or filled in by the QR scanner — with a short debounce so
+  // rapid typing or a scan doesn't fire a burst of RPC reads at once.
+  useEffect(() => {
+    if (!program || !secretHex.includes(":")) {
+      setExpiresInfo(null);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        const [businessOwnerStr, secretOnly] = secretHex.split(":");
+        if (!businessOwnerStr || !secretOnly) {
+          setExpiresInfo(null);
+          return;
+        }
+
+        const businessPubkey = new PublicKey(businessOwnerStr);
+        const [businessPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("business"), businessPubkey.toBuffer()],
+          program.programId
+        );
+
+        const secretBytes = new Uint8Array(
+          secretOnly.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
+        );
+
+        const keccak = await import("js-sha3");
+        const secretHashBytes = keccak.keccak256.array(secretBytes);
+
+        const [receiptPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from("receipt"), businessPda.toBuffer(), Buffer.from(secretHashBytes)],
+          program.programId
+        );
+
+        const [receiptAccount, onChainNow] = await Promise.all([
+          program.account.receipt.fetch(receiptPda),
+          getOnChainNow(program.provider.connection),
+        ]);
+
+        const expiresAt = Number((receiptAccount.expiresAt as any).toString());
+        const secondsLeft = expiresAt - onChainNow;
+
+        if (secondsLeft <= 0) {
+          setExpiresInfo(null);
+        } else if (secondsLeft < 3600) {
+          setExpiresInfo(`This code works for about ${Math.ceil(secondsLeft / 60)} more minutes.`);
+        } else {
+          setExpiresInfo(`This code works for about ${Math.ceil(secondsLeft / 3600)} more hours.`);
+        }
+      } catch {
+        setExpiresInfo(null);
+      }
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [secretHex, program]);
 
   async function handleClaim() {
     if (!program || !keypair) return;
@@ -161,11 +227,12 @@ export default function CustomerPage() {
       if (data.error) throw new Error(data.error);
 
       setSecretHex("");
+      setExpiresInfo(null);
       setRefreshKey((k) => k + 1);
-          } catch (err) {
-        setClaimError(translateError(err));
-      }
+    } catch (err) {
+      setClaimError(translateError(err));
     }
+  }
 
   return (
     <div className="flex flex-col items-center min-h-screen gap-6 p-8 bg-paper text-charcoal">
@@ -252,7 +319,7 @@ export default function CustomerPage() {
         </div>
       )}
 
-            {keypair && (
+      {keypair && (
         <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
           <div className="border border-line rounded-lg p-3 bg-white/60">
             <p className="text-xs text-charcoal/60 mb-1">Total stamps</p>
@@ -284,7 +351,7 @@ export default function CustomerPage() {
 
       {keypair && (
         <div className="flex flex-col items-center gap-2 border-t border-line pt-4 w-full max-w-sm">
-                    <button
+          <button
             type="button"
             className="w-full bg-ink text-paper rounded-md py-3 text-sm font-medium flex items-center justify-center gap-2"
             onClick={() => setShowScanner((s) => !s)}
@@ -313,6 +380,7 @@ export default function CustomerPage() {
             onChange={(e) => setSecretHex(e.target.value)}
             className="w-full border border-line rounded-md px-3 py-2 bg-white/60 font-mono text-sm"
           />
+          {expiresInfo && <p className="text-charcoal/60 text-sm">{expiresInfo}</p>}
           <button
             className="w-full bg-stamp-red text-paper rounded-md py-2 text-sm font-medium"
             onClick={handleClaim}

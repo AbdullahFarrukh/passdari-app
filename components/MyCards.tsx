@@ -15,6 +15,8 @@ type CardWithBusiness = {
   rewardLabel: string;
 };
 
+const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
+
 export function MyCards({
   keypair,
   refreshKey,
@@ -73,7 +75,7 @@ export function MyCards({
     load();
   }, [program, refreshKey]);
 
-  async function handleMint(card: CardWithBusiness) {
+  async function handleGetReward(card: CardWithBusiness) {
     if (!program) return;
     setMintError(null);
     setMintingFor(card.cardAddress);
@@ -87,8 +89,8 @@ export function MyCards({
         program.programId
       );
 
-      const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
-
+      // Step 1: mint — this creates a new account, so it goes through the
+      // relayer, same as every other account-creating instruction.
       const tx = await program.methods
         .mintVoucher(voucherId)
         .accounts({
@@ -107,7 +109,6 @@ export function MyCards({
       tx.partialSign(keypair);
 
       const serialized = tx.serialize({ requireAllSignatures: false }).toString("base64");
-
       const res = await fetch("/api/relay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,6 +116,32 @@ export function MyCards({
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
+
+            // Step 2: present — doesn't create anything, so no relayer field is
+      // needed in the instruction itself, but the relayer should still be
+      // the one paying the small transaction fee, matching MyVouchers.tsx's
+      // own present button, so nobody at any point in this flow needs SOL.
+      const presentTx = await program.methods
+        .presentVoucher()
+        .accounts({
+          voucher: voucherPda,
+          owner: keypair.publicKey,
+        })
+        .transaction();
+
+      presentTx.feePayer = RELAYER_PUBLIC_KEY;
+      const presentBlockhash = await program.provider.connection.getLatestBlockhash();
+      presentTx.recentBlockhash = presentBlockhash.blockhash;
+      presentTx.partialSign(keypair);
+
+      const presentSerialized = presentTx.serialize({ requireAllSignatures: false }).toString("base64");
+      const presentRes = await fetch("/api/relay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction: presentSerialized }),
+      });
+      const presentData = await presentRes.json();
+      if (presentData.error) throw new Error(presentData.error);
 
       onChange();
     } catch (err) {
@@ -177,9 +204,9 @@ export function MyCards({
               <button
                 className="mt-3 w-full bg-stamp-red text-paper rounded-md py-2 text-sm font-medium disabled:opacity-50"
                 disabled={mintingFor === card.cardAddress}
-                onClick={() => handleMint(card)}
+                onClick={() => handleGetReward(card)}
               >
-                {mintingFor === card.cardAddress ? "Minting…" : "Mint voucher"}
+                {mintingFor === card.cardAddress ? "Getting your reward…" : `Get my ${card.rewardLabel}`}
               </button>
             )}
           </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import BN from "bn.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
+import { translateError } from "@/lib/errorMessages";
 
 type CardWithBusiness = {
   cardAddress: string;
@@ -145,7 +146,7 @@ export function MyCards({
 
       onChange();
     } catch (err) {
-      setMintError(err instanceof Error ? err.message : "Something went wrong");
+      setMintError(translateError(err));
     } finally {
       setMintingFor(null);
     }

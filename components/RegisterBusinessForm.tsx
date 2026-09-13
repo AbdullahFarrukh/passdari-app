@@ -4,6 +4,8 @@ import { useState } from "react";
 import { PublicKey, SystemProgram, Keypair } from "@solana/web3.js";
 import BN from "bn.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
+import { translateError } from "@/lib/errorMessages";
+
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
@@ -66,8 +68,8 @@ export function RegisterBusinessForm({ keypair, onDone }: { keypair: Keypair; on
       if (data.error) throw new Error(data.error);
 
       onDone();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+        } catch (err) {
+      setError(translateError(err));
     } finally {
       setSubmitting(false);
     }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
+import { translateError } from "@/lib/errorMessages";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
@@ -104,8 +105,8 @@ export function PresentedVouchers({
       if (data.error) throw new Error(data.error);
 
       onRedeem();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+        } catch (err) {
+      setError(translateError(err));
     } finally {
       setBusy(null);
     }

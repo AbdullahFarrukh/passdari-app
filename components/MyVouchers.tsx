@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
+import { translateError } from "@/lib/errorMessages";
 
 type VoucherEntry = {
   address: string;
@@ -88,7 +89,7 @@ export function MyVouchers({
       await relaySign(tx);
       onChange();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+            setError(translateError(err));
     } finally {
       setBusy(null);
     }
@@ -111,7 +112,7 @@ export function MyVouchers({
       await relaySign(tx);
       onChange();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+            setError(translateError(err));
     } finally {
       setBusy(null);
     }
@@ -135,7 +136,7 @@ export function MyVouchers({
       await relaySign(tx);
       onChange();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+            setError(translateError(err));
     } finally {
       setBusy(null);
     }

@@ -8,6 +8,8 @@ import { MyCards } from "@/components/MyCards";
 import { MyVouchers } from "@/components/MyVouchers";
 import { BusinessDirectory } from "@/components/BusinessDirectory";
 import { QrScanner } from "@/components/QrScanner";
+import { translateError } from "@/lib/errorMessages";
+
 
 export default function CustomerPage() {
   const [username, setUsername] = useState("");
@@ -160,10 +162,10 @@ export default function CustomerPage() {
 
       setSecretHex("");
       setRefreshKey((k) => k + 1);
-    } catch (err) {
-      setClaimError(err instanceof Error ? err.message : "Something went wrong");
+          } catch (err) {
+        setClaimError(translateError(err));
+      }
     }
-  }
 
   return (
     <div className="flex flex-col items-center min-h-screen gap-6 p-8 bg-paper text-charcoal">

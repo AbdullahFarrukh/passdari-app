@@ -223,9 +223,15 @@ export default function MerchantPage() {
         <p className="text-sm text-charcoal/60 font-mono">Checking your account…</p>
       )}
 
-      {keypair && myBusiness === null && (
-        <RegisterBusinessForm keypair={keypair} onDone={checkForBusiness} />
-      )}
+              {keypair && myBusiness === null && (
+          <RegisterBusinessForm
+            keypair={keypair}
+            onDone={() => {
+              setNewMnemonic(null);
+              checkForBusiness();
+            }}
+          />
+        )}
 
       {keypair && myBusiness && myBusiness !== "checking" && (
         <>

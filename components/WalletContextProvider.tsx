@@ -1,19 +1,15 @@
 "use client";
 
 import { FC, ReactNode, useMemo } from "react";
-import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import { ConnectionProvider } from "@solana/wallet-adapter-react";
 
-import "@solana/wallet-adapter-react-ui/styles.css";
-
+// The name is a holdover from the Phantom-wallet era — no wallets are
+// registered here anymore, on either the merchant or customer side. What
+// genuinely still matters is the connection itself: every Anchor call in
+// this entire app, on both sides, ultimately gets its RPC endpoint from
+// this one provider.
 export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const endpoint = useMemo(() => "http://127.0.0.1:8899", []);
+  const endpoint = useMemo(() => "https://api.devnet.solana.com", []);
 
-  return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={[]} autoConnect>
-        <WalletModalProvider>{children}</WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
-  );
+  return <ConnectionProvider endpoint={endpoint}>{children}</ConnectionProvider>;
 };

@@ -4,7 +4,7 @@ import idl from "./loyalty.json";
 import { getCustomerNames } from "./db";
 
 const PROGRAM_ID = new PublicKey("HWvvvwSEounpNXcbD4JUNmniB5YxTcFNYoAestzJJCuL");
-const connection = new Connection("http://127.0.0.1:8899");
+const connection = new Connection("https://api.devnet.solana.com");
 const coder = new BorshCoder(idl as any);
 
 export async function getBusinessAnalytics(ownerAddress: string) {

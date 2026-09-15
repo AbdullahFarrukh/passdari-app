@@ -4,7 +4,7 @@ import nacl from "tweetnacl";
 import fs from "node:fs";
 import path from "node:path";
 
-const connection = new Connection("http://127.0.0.1:8899");
+const connection = new Connection("https://api.devnet.solana.com");
 
 const relayerSecretKey = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), "relayer-keypair.json"), "utf-8")

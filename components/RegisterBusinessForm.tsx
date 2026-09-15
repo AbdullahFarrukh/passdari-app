@@ -16,7 +16,7 @@ export function RegisterBusinessForm({ keypair, onDone }: { keypair: Keypair; on
   const [rewardLabel, setRewardLabel] = useState("");
   const [stampsRequired, setStampsRequired] = useState(10);
   const [minPurchasePkr, setMinPurchasePkr] = useState(1000);
-  const [receiptMinutes, setReceiptMinutes] = useState(5);
+  const [receiptMinutes, setReceiptMinutes] = useState(120);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

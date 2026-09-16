@@ -4,8 +4,8 @@ import nacl from "tweetnacl";
 import fs from "node:fs";
 import path from "node:path";
 
-const connection = new Connection("https://api.devnet.solana.com");
-
+const connection = new Connection(process.env.HELIUS_RPC_URL ?? "https://api.devnet.solana.com");
+console.log("Relay is using RPC:", process.env.HELIUS_RPC_URL ?? "FALLBACK — public devnet, env var not found");
 const relayerSecretKey = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), "relayer-keypair.json"), "utf-8")
 );
@@ -44,8 +44,9 @@ export async function POST(request: NextRequest) {
       ...signatureBuffers,
       messageBytes,
     ]);
-
-    const signature = await connection.sendRawTransaction(wireTransaction);
+        const signature = await connection.sendRawTransaction(wireTransaction, {
+      preflightCommitment: "confirmed",
+    });
 
     const latestBlockhash = await connection.getLatestBlockhash();
     const confirmation = await connection.confirmTransaction(

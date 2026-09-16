@@ -9,7 +9,10 @@ import { ConnectionProvider } from "@solana/wallet-adapter-react";
 // this entire app, on both sides, ultimately gets its RPC endpoint from
 // this one provider.
 export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const endpoint = useMemo(() => "https://api.devnet.solana.com", []);
+    const endpoint = useMemo(
+    () => process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? "https://api.devnet.solana.com",
+    []
+  );
 
   return <ConnectionProvider endpoint={endpoint}>{children}</ConnectionProvider>;
 };

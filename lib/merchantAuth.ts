@@ -10,8 +10,8 @@ async function deriveEncryptionKey(password: string, salt: Uint8Array): Promise<
     false,
     ["deriveKey"]
   );
-  return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: salt as BufferSource, iterations: 100000, hash: "SHA-256" },
     passwordKey,
     { name: "AES-GCM", length: 256 },
     false,

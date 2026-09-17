@@ -30,6 +30,6 @@ export function useCustomerProgram(keypair: Keypair | null) {
     const wallet = walletFromKeypair(keypair);
     const provider = new AnchorProvider(connection, wallet, {});
     setProvider(provider);
-    return new Program(idl as Loyalty, provider);
+    return new Program<Loyalty>(idl as Loyalty, provider);
   }, [connection, keypair]);
 }

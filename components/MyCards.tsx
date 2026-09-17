@@ -150,7 +150,7 @@ export function MyCards({
           customer: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
           systemProgram: SystemProgram.programId,
-        })
+        } as any)
         .transaction();
 
       tx.feePayer = RELAYER_PUBLIC_KEY;
@@ -176,7 +176,7 @@ export function MyCards({
         .accounts({
           voucher: voucherPda,
           owner: keypair.publicKey,
-        })
+        } as any)
         .transaction();
 
       presentTx.feePayer = RELAYER_PUBLIC_KEY;

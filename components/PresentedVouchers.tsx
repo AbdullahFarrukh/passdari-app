@@ -87,7 +87,7 @@ export function PresentedVouchers({
           card: cardPda,
           authority: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
-        })
+        } as any)
         .transaction();
 
       tx.feePayer = RELAYER_PUBLIC_KEY;

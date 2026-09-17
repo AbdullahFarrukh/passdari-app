@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Program } from "@anchor-lang/core";
+import type { Loyalty } from "@/lib/loyalty";
 import { Keypair, PublicKey } from "@solana/web3.js";
 
 type Business = {
@@ -25,7 +26,7 @@ export function MerchantDashboard({
   business,
   keypair,
 }: {
-  program: Program | null;
+  program: Program<Loyalty> | null;
   business: Business;
   keypair: Keypair;
 }) {

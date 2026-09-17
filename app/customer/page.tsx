@@ -208,7 +208,7 @@ export default function CustomerPage() {
           customer: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
           systemProgram: SystemProgram.programId,
-        })
+        } as any)
         .transaction();
 
       tx.feePayer = RELAYER_PUBLIC_KEY;

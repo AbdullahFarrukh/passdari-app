@@ -85,7 +85,7 @@ export function ReclaimExpiredReceipts({ keypair }: { keypair: Keypair }) {
               business: businessPda,
               authority: keypair.publicKey,
               relayer: RELAYER_PUBLIC_KEY,
-            })
+            } as any)
             .transaction();
 
           tx.feePayer = RELAYER_PUBLIC_KEY;

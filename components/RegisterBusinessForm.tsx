@@ -50,7 +50,7 @@ export function RegisterBusinessForm({ keypair, onDone }: { keypair: Keypair; on
           authority: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
           systemProgram: SystemProgram.programId,
-        })
+        } as any)
         .transaction();
 
       tx.feePayer = RELAYER_PUBLIC_KEY;

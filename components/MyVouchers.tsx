@@ -83,7 +83,7 @@ export function MyVouchers({
         .accounts({
           voucher: new PublicKey(voucherAddress),
           owner: keypair.publicKey,
-        })
+        } as any)
         .transaction();
 
       await relaySign(tx);
@@ -106,7 +106,7 @@ export function MyVouchers({
         .accounts({
           voucher: new PublicKey(voucherAddress),
           owner: keypair.publicKey,
-        })
+        } as any)
         .transaction();
 
       await relaySign(tx);
@@ -130,7 +130,7 @@ export function MyVouchers({
         .accounts({
           voucher: new PublicKey(voucherAddress),
           owner: keypair.publicKey,
-        })
+        } as any)
         .transaction();
 
       await relaySign(tx);

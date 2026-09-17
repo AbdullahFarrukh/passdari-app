@@ -61,7 +61,7 @@ Homepage (choose customer or merchant): `localhost:3000` · Merchant: `localhost
 
 **Merchant:** registration, live dashboard (cards, stamps, rewards, top loyal customers by name and by *rewards redeemed*, not raw stamp count), "New sale" with QR code generation, a "Clean up expired receipts" button that reclaims rent back to the relayer, presented-voucher redemption, an AI copilot chat bubble with three tested, clickable questions.
 
-**Customer:** sign up / sign in / account recovery via backup phrase, "My cards" with a real stamp-row visual (not a generic progress bar), profile stats, a business directory (shown once a customer has claimed their first stamp), camera QR scanning with manual entry fallback, minting, presenting, cancelling, and gifting vouchers.
+**Customer:** sign up / sign in / account recovery via backup phrase, "My cards" with a real stamp-row visual (not a generic progress bar), profile stats, a business directory of the customer's own participating businesses (shown once they've claimed their first stamp), camera QR scanning with manual entry fallback, minting, presenting, cancelling, and gifting vouchers.
 
 ## Architecture note: the customer-names database
 

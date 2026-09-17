@@ -72,8 +72,57 @@ export function MyCards({
     onStats?.({ totalStamps, completedCards, inProgressCards });
   }
 
-  useEffect(() => {
-    load();
+    useEffect(() => {
+    let cancelled = false;
+
+    async function loadIfStillCurrent() {
+      if (!program) return;
+
+      const myCards = await program.account.loyaltyCard.all([
+        {
+          memcmp: {
+            offset: 40,
+            bytes: keypair.publicKey.toBase58(),
+          },
+        },
+      ]);
+
+      // If the user has already switched accounts by the time this
+      // resolves, this result is stale — don't let it overwrite the
+      // current, correct state with data from a previous session.
+      if (cancelled) return;
+
+      const withBusinessInfo = await Promise.all(
+        myCards.map(async (entry) => {
+          const business = await program.account.business.fetch(entry.account.business as any);
+          return {
+            cardAddress: entry.publicKey.toBase58(),
+            businessAddress: entry.account.business,
+            stamps: entry.account.stamps as number,
+            stampsRequired: business.stampsRequired as number,
+            redemptions: entry.account.redemptions as number,
+            name: business.name as string,
+            rewardLabel: business.rewardLabel as string,
+          };
+        })
+      );
+
+      if (cancelled) return;
+
+      setCards(withBusinessInfo);
+      onLoaded?.(withBusinessInfo.length);
+
+      const totalStamps = withBusinessInfo.reduce((sum, c) => sum + c.stamps, 0);
+      const completedCards = withBusinessInfo.filter((c) => c.stamps >= c.stampsRequired).length;
+      const inProgressCards = withBusinessInfo.length - completedCards;
+      onStats?.({ totalStamps, completedCards, inProgressCards });
+    }
+
+    loadIfStillCurrent();
+
+    return () => {
+      cancelled = true;
+    };
   }, [program, refreshKey]);
 
   async function handleGetReward(card: CardWithBusiness) {

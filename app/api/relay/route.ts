@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Connection, Keypair, Transaction } from "@solana/web3.js";
 import nacl from "tweetnacl";
-import fs from "node:fs";
-import path from "node:path";
 
 const connection = new Connection(process.env.HELIUS_RPC_URL ?? "https://api.devnet.solana.com");
-console.log("Relay is using RPC:", process.env.HELIUS_RPC_URL ?? "FALLBACK — public devnet, env var not found");
-const relayerSecretKey = JSON.parse(
-  fs.readFileSync(path.join(process.cwd(), "relayer-keypair.json"), "utf-8")
-);
+
+// The relayer's real secret key, read from an environment variable rather
+// than a local file — a plain file on disk works fine on a developer's own
+// machine, but a deployed server (Vercel, or anywhere else) has no such
+// file at all, and shouldn't: this keeps the real key out of the repo
+// entirely, set once in the hosting platform's own secrets dashboard.
+const relayerSecretKey = JSON.parse(process.env.RELAYER_SECRET_KEY!);
 const relayer = Keypair.fromSecretKey(new Uint8Array(relayerSecretKey));
 
 export async function POST(request: NextRequest) {
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
       ...signatureBuffers,
       messageBytes,
     ]);
-        const signature = await connection.sendRawTransaction(wireTransaction, {
+
+    const signature = await connection.sendRawTransaction(wireTransaction, {
       preflightCommitment: "confirmed",
     });
 

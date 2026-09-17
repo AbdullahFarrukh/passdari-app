@@ -17,30 +17,58 @@ export function BusinessDirectory({ keypair }: { keypair: Keypair }) {
   const [businesses, setBusinesses] = useState<DirectoryEntry[] | null>(null);
 
   useEffect(() => {
-    if (!program) return;
+    let cancelled = false;
 
-    async function load() {
-      const all = await program!.account.business.all();
-      setBusinesses(
-        all.map((entry) => ({
-          address: entry.publicKey.toBase58(),
-          name: entry.account.name as string,
-          category: entry.account.category as string,
-          rewardLabel: entry.account.rewardLabel as string,
-          stampsRequired: entry.account.stampsRequired as number,
-        }))
+    async function loadIfStillCurrent() {
+      if (!program) return;
+
+      // Only this customer's own cards — the same filtered pattern used in
+      // MyCards.tsx. offset 40 is where LoyaltyCard's `customer` field
+      // sits, right after Anchor's 8-byte header and the `business` pubkey.
+      const myCards = await program.account.loyaltyCard.all([
+        {
+          memcmp: {
+            offset: 40,
+            bytes: keypair.publicKey.toBase58(),
+          },
+        },
+      ]);
+
+      if (cancelled) return;
+
+      // Fetch only the specific businesses this customer actually has a
+      // card at — not every business on the platform.
+      const entries = await Promise.all(
+        myCards.map(async (card) => {
+          const business = await program.account.business.fetch(card.account.business as any);
+          return {
+            address: (card.account.business as any).toBase58(),
+            name: business.name as string,
+            category: business.category as string,
+            rewardLabel: business.rewardLabel as string,
+            stampsRequired: business.stampsRequired as number,
+          };
+        })
       );
+
+      if (cancelled) return;
+
+      setBusinesses(entries);
     }
 
-    load();
-  }, [program]);
+    loadIfStillCurrent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [program, keypair]);
 
   if (businesses === null) {
     return <p className="text-sm text-charcoal/60 font-mono">Loading businesses…</p>;
   }
 
   if (businesses.length === 0) {
-    return <p className="text-sm text-charcoal/60">No businesses registered yet.</p>;
+    return null;
   }
 
   return (

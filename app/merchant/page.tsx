@@ -129,7 +129,7 @@ export default function MerchantPage() {
     <div className="min-h-screen bg-paper text-charcoal flex flex-col items-center py-10 px-8 gap-6">
       {!keypair && (
         <div className="flex flex-col items-center gap-2 w-full max-w-sm mt-16">
-          <p className="font-mono text-lg text-ink mb-2">StampCoin — Merchant</p>
+                    <p className="font-mono text-lg text-ink mb-2">Passdari — Merchant</p>
           <input
             placeholder="Username"
             value={username}

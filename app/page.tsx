@@ -6,7 +6,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-paper text-charcoal flex flex-col items-center justify-center gap-12 px-8">
       <div className="text-center">
-        <p className="font-mono text-4xl font-semibold text-ink mb-3">StampCoin</p>
+                <p className="font-mono text-4xl font-semibold text-ink mb-3">PASSDARI</p>
         <div className="flex justify-center gap-1.5 mb-3">
           {Array.from({ length: 10 }).map((_, i) => (
             <span

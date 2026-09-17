@@ -1,6 +1,6 @@
-# StampCoin — Web App
+# Passdari — Web App
 
-The web frontend for the StampCoin dApp — two interfaces in one app: a merchant
+The web frontend for the Passdari dApp — two interfaces in one app: a merchant
 dashboard and a customer loyalty wallet, both talking to the on-chain program in
 [`stampcoin`](https://github.com/AbdullahFarrukh/stampcoin). Neither side installs
 a wallet extension, and neither side ever holds or spends SOL — a backend relayer

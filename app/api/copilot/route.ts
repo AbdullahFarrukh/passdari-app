@@ -1,8 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { PublicKey } from "@solana/web3.js";
 import { getBusinessAnalytics } from "@/lib/analytics";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+const MAX_QUESTION_LENGTH = 300;
+
+// This endpoint calls a paid third-party API on every request, so an
+// unrated endpoint here isn't just a spam risk — it's a real money risk.
+// Keeping the limit tighter than the other endpoints on purpose.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
+const requestLog = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = (requestLog.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  timestamps.push(now);
+  requestLog.set(ip, timestamps);
+  return timestamps.length > RATE_LIMIT_MAX_REQUESTS;
+}
+
+function isValidSolanaAddress(address: unknown): address is string {
+  if (typeof address !== "string") return false;
+  try {
+    new PublicKey(address);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const SYSTEM_PROMPT = `You are a loyalty program analyst for a small local business.
 You will be given a JSON summary of the business's real on-chain loyalty data:
@@ -66,10 +94,26 @@ function fallbackAnswer(question: string, summary: Awaited<ReturnType<typeof get
 }
 
 export async function POST(request: NextRequest) {
-  const { owner, question } = await request.json();
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (isRateLimited(ip)) {
+    return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });
+  }
 
-  if (!owner || !question) {
-    return NextResponse.json({ error: "owner and question are required" }, { status: 400 });
+  const body = await request.json().catch(() => null);
+  const owner = body?.owner;
+  const question = body?.question;
+
+  if (!isValidSolanaAddress(owner)) {
+    return NextResponse.json({ error: "owner must be a valid Solana public key" }, { status: 400 });
+  }
+  if (typeof question !== "string" || question.trim().length === 0) {
+    return NextResponse.json({ error: "question is required" }, { status: 400 });
+  }
+  if (question.length > MAX_QUESTION_LENGTH) {
+    return NextResponse.json(
+      { error: `question must be ${MAX_QUESTION_LENGTH} characters or fewer` },
+      { status: 400 }
+    );
   }
 
   let summary;

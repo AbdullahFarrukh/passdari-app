@@ -20,7 +20,11 @@ const ConnectionContext = createContext<Connection | null>(null);
 
 export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const endpoint = process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? "https://api.devnet.solana.com";
-  const connection = useMemo(() => new Connection(endpoint), [endpoint]);
+  // Read at "confirmed", the same level the relay waits for before it says a
+  // transaction is done. Without this the connection reads at "finalized",
+  // which trails by about 13 seconds, so screens keep showing old data after
+  // an action. (wallet-adapter's ConnectionProvider used to set this for us.)
+  const connection = useMemo(() => new Connection(endpoint, "confirmed"), [endpoint]);
 
   return <ConnectionContext.Provider value={connection}>{children}</ConnectionContext.Provider>;
 };

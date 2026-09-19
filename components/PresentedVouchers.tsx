@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
+import { TOKEN_2022_PROGRAM_ID, findHolders } from "@/lib/vouchers";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
 type PresentedVoucher = {
   address: string;
   voucherId: string;
-  owner: string;
+  mint: PublicKey;
+  holder: string;
+  holderToken: PublicKey;
 };
 
 export function PresentedVouchers({
@@ -42,14 +45,31 @@ export function PresentedVouchers({
         { memcmp: { offset: 8, bytes: businessPda.toBase58() } },
       ]);
 
-      const presented = all.filter((entry) => entry.account.pendingRedemption);
+      // "Presented" is a fact about the voucher's token: it's frozen while
+      // its holder is showing it to a merchant. So look at whoever really
+      // holds each voucher right now, not at the owner field on the voucher.
+      const holders = await findHolders(
+        program!.provider.connection,
+        all.map((entry) => ({
+          mint: entry.account.mint as PublicKey,
+          ownerHint: entry.account.owner as PublicKey,
+        }))
+      );
 
       setVouchers(
-        presented.map((entry) => ({
-          address: entry.publicKey.toBase58(),
-          voucherId: (entry.account.voucherId as any).toString(),
-          owner: (entry.account.owner as any).toBase58(),
-        }))
+        all.flatMap((entry, i) => {
+          const holder = holders[i];
+          if (!holder?.frozen) return [];
+          return [
+            {
+              address: entry.publicKey.toBase58(),
+              voucherId: (entry.account.voucherId as any).toString(),
+              mint: entry.account.mint as PublicKey,
+              holder: holder.owner.toBase58(),
+              holderToken: holder.tokenAccount,
+            },
+          ];
+        })
       );
     }
 
@@ -63,10 +83,10 @@ export function PresentedVouchers({
     return () => clearInterval(interval);
   }, []);
 
-  async function handleRedeem(voucherAddress: string, ownerAddress: string) {
+  async function handleRedeem(v: PresentedVoucher) {
     if (!program) return;
     setError(null);
-    setBusy(voucherAddress);
+    setBusy(v.address);
 
     try {
       const [businessPda] = PublicKey.findProgramAddressSync(
@@ -74,19 +94,18 @@ export function PresentedVouchers({
         program.programId
       );
 
-      const [cardPda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("card"), businessPda.toBuffer(), new PublicKey(ownerAddress).toBuffer()],
-        program.programId
-      );
-
+      // Redeeming burns the voucher's NFT. No card is involved, so a voucher
+      // that was gifted to someone with no card here redeems just the same.
       const tx = await program.methods
         .redeemVoucher()
         .accounts({
           business: businessPda,
-          voucher: new PublicKey(voucherAddress),
-          card: cardPda,
+          voucher: new PublicKey(v.address),
+          mint: v.mint,
+          holderToken: v.holderToken,
           authority: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
         } as any)
         .transaction();
 
@@ -125,12 +144,12 @@ export function PresentedVouchers({
             <div>
               <p className="font-mono text-sm text-ink">Voucher #{v.voucherId}</p>
               <p className="text-xs text-charcoal/50 font-mono">
-                {v.owner.slice(0, 4)}…{v.owner.slice(-4)}
+                {v.holder.slice(0, 4)}…{v.holder.slice(-4)}
               </p>
             </div>
             <button
               disabled={busy === v.address}
-              onClick={() => handleRedeem(v.address, v.owner)}
+              onClick={() => handleRedeem(v)}
               className="bg-stamp-red text-paper rounded-md px-4 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               {busy === v.address ? "Redeeming…" : "Redeem"}

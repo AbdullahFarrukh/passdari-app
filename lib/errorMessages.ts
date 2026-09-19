@@ -13,7 +13,12 @@ export function translateError(err: unknown): string {
   if (raw.includes("AccountNotSigner") || raw.includes("AccountNotEnoughKeys")) {
     return "Something went wrong on our end — please try again in a moment.";
   }
-  if (raw.includes("ConstraintSeeds") || raw.includes("ConstraintHasOne")) {
+  if (
+    raw.includes("ConstraintSeeds") ||
+    raw.includes("ConstraintHasOne") ||
+    raw.includes("ConstraintTokenOwner") ||
+    raw.includes("ConstraintTokenMint")
+  ) {
     return "This doesn't look right — please check and try again.";
   }
 

@@ -27,15 +27,25 @@ export type Loyalty = {
       ],
       "accounts": [
         {
-          "name": "voucher",
+          "name": "voucher"
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "voucher"
+          ]
+        },
+        {
+          "name": "holderToken",
           "writable": true
         },
         {
           "name": "owner",
-          "signer": true,
-          "relations": [
-            "voucher"
-          ]
+          "signer": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": []
@@ -347,6 +357,101 @@ export type Loyalty = {
           }
         },
         {
+          "name": "mint",
+          "docs": [
+            "The voucher's NFT. The voucher account is its mint authority, freeze",
+            "authority and permanent delegate, so only this program can freeze,",
+            "thaw or burn it. The metadata lives inside the mint account itself."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  117,
+                  99,
+                  104,
+                  101,
+                  114,
+                  95,
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "business"
+              },
+              {
+                "kind": "arg",
+                "path": "voucherId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "customerToken",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "customer"
+              },
+              {
+                "kind": "account",
+                "path": "tokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
           "name": "customer",
           "docs": [
             "The customer converting their stamps into a voucher. Signs to",
@@ -357,10 +462,19 @@ export type Loyalty = {
         {
           "name": "relayer",
           "docs": [
-            "The relayer, covering the voucher's rent on the customer's behalf."
+            "The relayer, covering the rent for the voucher, its mint and the",
+            "customer's token account on the customer's behalf."
           ],
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "systemProgram",
@@ -371,6 +485,10 @@ export type Loyalty = {
         {
           "name": "voucherId",
           "type": "u64"
+        },
+        {
+          "name": "uri",
+          "type": "string"
         }
       ]
     },
@@ -388,15 +506,29 @@ export type Loyalty = {
       ],
       "accounts": [
         {
-          "name": "voucher",
+          "name": "voucher"
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "voucher"
+          ]
+        },
+        {
+          "name": "holderToken",
+          "docs": [
+            "The token account holding the voucher. The signer must own it, so",
+            "only the real holder can present."
+          ],
           "writable": true
         },
         {
           "name": "owner",
-          "signer": true,
-          "relations": [
-            "voucher"
-          ]
+          "signer": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": []
@@ -489,30 +621,23 @@ export type Loyalty = {
           "writable": true
         },
         {
-          "name": "card",
+          "name": "mint",
+          "docs": [
+            "Writable because burning lowers its supply."
+          ],
           "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  97,
-                  114,
-                  100
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "business"
-              },
-              {
-                "kind": "account",
-                "path": "voucher.owner",
-                "account": "voucher"
-              }
-            ]
-          }
+          "relations": [
+            "voucher"
+          ]
+        },
+        {
+          "name": "holderToken",
+          "docs": [
+            "Whoever holds the voucher right now. The merchant doesn't need to",
+            "know the holder's address, only that this account is the one holding",
+            "the voucher token and that it was presented (frozen)."
+          ],
+          "writable": true
         },
         {
           "name": "authority",
@@ -531,6 +656,10 @@ export type Loyalty = {
             "a payer."
           ],
           "signer": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": []
@@ -645,19 +774,113 @@ export type Loyalty = {
           "writable": true
         },
         {
-          "name": "owner",
-          "signer": true,
+          "name": "mint",
           "relations": [
             "voucher"
           ]
-        }
-      ],
-      "args": [
+        },
+        {
+          "name": "fromToken",
+          "docs": [
+            "A frozen account (a voucher presented to a merchant) can't be",
+            "transferred. The token program refuses it as well, this just gives a",
+            "clearer error."
+          ],
+          "writable": true
+        },
+        {
+          "name": "toToken",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "newOwner"
+              },
+              {
+                "kind": "account",
+                "path": "tokenProgram"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
         {
           "name": "newOwner",
-          "type": "pubkey"
+          "docs": [
+            "account. It never has to sign."
+          ]
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "The current holder, signing to send the voucher away."
+          ],
+          "signer": true
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "The relayer, covering the rent for the receiving token account if it",
+            "doesn't exist yet."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
-      ]
+      ],
+      "args": []
     },
     {
       "name": "updateBusinessConfig",
@@ -841,7 +1064,7 @@ export type Loyalty = {
     {
       "code": 6006,
       "name": "voucherPending",
-      "msg": "This voucher is currently presented for redemption and cannot be transferred"
+      "msg": "This voucher is currently presented for redemption"
     },
     {
       "code": 6007,
@@ -867,6 +1090,16 @@ export type Loyalty = {
       "code": 6011,
       "name": "claimRateLimitExceeded",
       "msg": "This card has claimed too many stamps today"
+    },
+    {
+      "code": 6012,
+      "name": "uriTooLong",
+      "msg": "The voucher metadata URI is too long"
+    },
+    {
+      "code": 6013,
+      "name": "notVoucherHolder",
+      "msg": "This token account does not hold the voucher"
     }
   ],
   "types": [
@@ -1069,6 +1302,16 @@ export type Loyalty = {
           },
           {
             "name": "owner",
+            "docs": [
+              "The wallet that last received this voucher through `transfer_voucher`.",
+              "Only a hint so the app can list a customer's vouchers. A wallet can",
+              "move the NFT without telling us, so this can go stale. Never use it",
+              "for permission checks: the token account is the source of truth."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
             "type": "pubkey"
           },
           {
@@ -1078,10 +1321,6 @@ export type Loyalty = {
           {
             "name": "mintedAt",
             "type": "i64"
-          },
-          {
-            "name": "pendingRedemption",
-            "type": "bool"
           },
           {
             "name": "bump",

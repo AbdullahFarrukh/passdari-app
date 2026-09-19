@@ -17,7 +17,7 @@ type Business = {
 
 type TopCustomer = {
   address: string;
-  redemptions: number;
+  rewards: number;
   name: string | null;
 };
 
@@ -49,13 +49,24 @@ export function MerchantDashboard({
         { memcmp: { offset: 8, bytes: businessPda.toBase58() } },
       ]);
 
+      // Redemptions are counted on the business now, not on each customer's
+      // card — a voucher can be gifted, so the person redeeming it may never
+      // have had a card here. What a card still knows is how many rewards its
+      // customer has earned: stamps only ever leave a card when they're
+      // spent on a voucher, and each voucher costs the card's own required
+      // count. So (every stamp ever earned) minus (stamps still on the card)
+      // divided by that count is the number of vouchers they've made.
       const sorted = allCards
-        .map((entry) => ({
-          address: (entry.account.customer as any).toBase58(),
-          redemptions: entry.account.redemptions as number,
-        }))
-        .filter((c) => c.redemptions > 0)
-        .sort((a, b) => b.redemptions - a.redemptions)
+        .map((entry) => {
+          const spent = (entry.account.lifetimeStamps as number) - (entry.account.stamps as number);
+          const perReward = entry.account.stampsRequiredSnapshot as number;
+          return {
+            address: (entry.account.customer as any).toBase58(),
+            rewards: perReward > 0 ? Math.floor(spent / perReward) : 0,
+          };
+        })
+        .filter((c) => c.rewards > 0)
+        .sort((a, b) => b.rewards - a.rewards)
         .slice(0, 5);
 
       let names: Record<string, string> = {};
@@ -121,7 +132,7 @@ export function MerchantDashboard({
                   {i + 1}. {c.name ?? `${c.address.slice(0, 4)}…${c.address.slice(-4)}`}
                 </span>
                 <span className="font-mono text-ink font-medium">
-                  {c.redemptions} reward{c.redemptions === 1 ? "" : "s"}
+                  {c.rewards} reward{c.rewards === 1 ? "" : "s"} earned
                 </span>
               </div>
             ))}

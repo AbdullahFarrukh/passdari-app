@@ -21,15 +21,25 @@
       ],
       "accounts": [
         {
-          "name": "voucher",
+          "name": "voucher"
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "voucher"
+          ]
+        },
+        {
+          "name": "holder_token",
           "writable": true
         },
         {
           "name": "owner",
-          "signer": true,
-          "relations": [
-            "voucher"
-          ]
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": []
@@ -341,6 +351,101 @@
           }
         },
         {
+          "name": "mint",
+          "docs": [
+            "The voucher's NFT. The voucher account is its mint authority, freeze",
+            "authority and permanent delegate, so only this program can freeze,",
+            "thaw or burn it. The metadata lives inside the mint account itself."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  117,
+                  99,
+                  104,
+                  101,
+                  114,
+                  95,
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "business"
+              },
+              {
+                "kind": "arg",
+                "path": "voucher_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "customer_token",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "customer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
           "name": "customer",
           "docs": [
             "The customer converting their stamps into a voucher. Signs to",
@@ -351,10 +456,19 @@
         {
           "name": "relayer",
           "docs": [
-            "The relayer, covering the voucher's rent on the customer's behalf."
+            "The relayer, covering the rent for the voucher, its mint and the",
+            "customer's token account on the customer's behalf."
           ],
           "writable": true,
           "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
           "name": "system_program",
@@ -365,6 +479,10 @@
         {
           "name": "voucher_id",
           "type": "u64"
+        },
+        {
+          "name": "uri",
+          "type": "string"
         }
       ]
     },
@@ -382,15 +500,29 @@
       ],
       "accounts": [
         {
-          "name": "voucher",
+          "name": "voucher"
+        },
+        {
+          "name": "mint",
+          "relations": [
+            "voucher"
+          ]
+        },
+        {
+          "name": "holder_token",
+          "docs": [
+            "The token account holding the voucher. The signer must own it, so",
+            "only the real holder can present."
+          ],
           "writable": true
         },
         {
           "name": "owner",
-          "signer": true,
-          "relations": [
-            "voucher"
-          ]
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": []
@@ -483,30 +615,23 @@
           "writable": true
         },
         {
-          "name": "card",
+          "name": "mint",
+          "docs": [
+            "Writable because burning lowers its supply."
+          ],
           "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  97,
-                  114,
-                  100
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "business"
-              },
-              {
-                "kind": "account",
-                "path": "voucher.owner",
-                "account": "Voucher"
-              }
-            ]
-          }
+          "relations": [
+            "voucher"
+          ]
+        },
+        {
+          "name": "holder_token",
+          "docs": [
+            "Whoever holds the voucher right now. The merchant doesn't need to",
+            "know the holder's address, only that this account is the one holding",
+            "the voucher token and that it was presented (frozen)."
+          ],
+          "writable": true
         },
         {
           "name": "authority",
@@ -525,6 +650,10 @@
             "a payer."
           ],
           "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": []
@@ -639,19 +768,113 @@
           "writable": true
         },
         {
-          "name": "owner",
-          "signer": true,
+          "name": "mint",
           "relations": [
             "voucher"
           ]
-        }
-      ],
-      "args": [
+        },
+        {
+          "name": "from_token",
+          "docs": [
+            "A frozen account (a voucher presented to a merchant) can't be",
+            "transferred. The token program refuses it as well, this just gives a",
+            "clearer error."
+          ],
+          "writable": true
+        },
+        {
+          "name": "to_token",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "new_owner"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
         {
           "name": "new_owner",
-          "type": "pubkey"
+          "docs": [
+            "account. It never has to sign."
+          ]
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "The current holder, signing to send the voucher away."
+          ],
+          "signer": true
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "The relayer, covering the rent for the receiving token account if it",
+            "doesn't exist yet."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
-      ]
+      ],
+      "args": []
     },
     {
       "name": "update_business_config",
@@ -835,7 +1058,7 @@
     {
       "code": 6006,
       "name": "VoucherPending",
-      "msg": "This voucher is currently presented for redemption and cannot be transferred"
+      "msg": "This voucher is currently presented for redemption"
     },
     {
       "code": 6007,
@@ -861,6 +1084,16 @@
       "code": 6011,
       "name": "ClaimRateLimitExceeded",
       "msg": "This card has claimed too many stamps today"
+    },
+    {
+      "code": 6012,
+      "name": "UriTooLong",
+      "msg": "The voucher metadata URI is too long"
+    },
+    {
+      "code": 6013,
+      "name": "NotVoucherHolder",
+      "msg": "This token account does not hold the voucher"
     }
   ],
   "types": [
@@ -1063,6 +1296,16 @@
           },
           {
             "name": "owner",
+            "docs": [
+              "The wallet that last received this voucher through `transfer_voucher`.",
+              "Only a hint so the app can list a customer's vouchers. A wallet can",
+              "move the NFT without telling us, so this can go stale. Never use it",
+              "for permission checks: the token account is the source of truth."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
             "type": "pubkey"
           },
           {
@@ -1072,10 +1315,6 @@
           {
             "name": "minted_at",
             "type": "i64"
-          },
-          {
-            "name": "pending_redemption",
-            "type": "bool"
           },
           {
             "name": "bump",

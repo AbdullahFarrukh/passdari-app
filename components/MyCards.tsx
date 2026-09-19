@@ -5,6 +5,13 @@ import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import BN from "bn.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
+  tokenAccountFor,
+  voucherMetadataUri,
+  voucherMintPda,
+} from "@/lib/vouchers";
 
 type CardWithBusiness = {
   cardAddress: string;
@@ -139,16 +146,26 @@ export function MyCards({
         program.programId
       );
 
-      // Step 1: mint — this creates a new account, so it goes through the
-      // relayer, same as every other account-creating instruction.
+      // The voucher is also an NFT: its own token mint, and the token account
+      // that holds it in the customer's name.
+      const voucherMint = voucherMintPda(program.programId, card.businessAddress, voucherId);
+      const customerToken = tokenAccountFor(keypair.publicKey, voucherMint);
+
+      // Step 1: mint — this creates new accounts (the voucher, its NFT and
+      // the customer's token account), so it goes through the relayer, same
+      // as every other account-creating instruction.
       const tx = await program.methods
-        .mintVoucher(voucherId)
+        .mintVoucher(voucherId, voucherMetadataUri(voucherMint, window.location.origin))
         .accounts({
           business: card.businessAddress,
           card: new PublicKey(card.cardAddress),
           voucher: voucherPda,
+          mint: voucherMint,
+          customerToken,
           customer: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
         } as any)
         .transaction();
@@ -175,7 +192,10 @@ export function MyCards({
         .presentVoucher()
         .accounts({
           voucher: voucherPda,
+          mint: voucherMint,
+          holderToken: customerToken,
           owner: keypair.publicKey,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
         } as any)
         .transaction();
 

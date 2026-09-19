@@ -1,14 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
+  VOUCHER_MINT_OFFSET,
+  listHeldNfts,
+  tokenAccountFor,
+} from "@/lib/vouchers";
 
 type VoucherEntry = {
   address: string;
   voucherId: string;
-  pendingRedemption: boolean;
+  mint: PublicKey;
+  holderToken: PublicKey;
+  presented: boolean;
 };
 
 export function MyVouchers({
@@ -32,19 +41,28 @@ export function MyVouchers({
     if (!program) return;
 
     async function load() {
-      const myVouchers = await program!.account.voucher.all([
-        {
-          memcmp: {
-            offset: 40,
-            bytes: keypair.publicKey.toBase58(),
-          },
-        },
-      ]);
+      // A voucher belongs to whoever holds its token, so start from the
+      // tokens this wallet holds — not from the owner field on the voucher,
+      // which goes stale if the NFT is moved from outside this app.
+      const held = await listHeldNfts(program!.provider.connection, keypair.publicKey);
 
-      const mapped = myVouchers.map((entry) => ({
+      // Anyone can send any NFT to any wallet, so keep only the ones that
+      // really are our vouchers.
+      const matched = await Promise.all(
+        held.map(async (nft) => {
+          const vouchers = await program!.account.voucher.all([
+            { memcmp: { offset: VOUCHER_MINT_OFFSET, bytes: nft.mint.toBase58() } },
+          ]);
+          return vouchers.map((entry) => ({ entry, nft }));
+        })
+      );
+
+      const mapped = matched.flat().map(({ entry, nft }) => ({
         address: entry.publicKey.toBase58(),
         voucherId: (entry.account.voucherId as any).toString(),
-        pendingRedemption: entry.account.pendingRedemption as boolean,
+        mint: nft.mint,
+        holderToken: nft.tokenAccount,
+        presented: nft.frozen,
       }));
 
       setVouchers(mapped);
@@ -72,17 +90,20 @@ export function MyVouchers({
     if (data.error) throw new Error(data.error);
   }
 
-  async function handlePresent(voucherAddress: string) {
+  async function handlePresent(v: VoucherEntry) {
     if (!program) return;
     setError(null);
-    setBusy(voucherAddress);
+    setBusy(v.address);
 
     try {
       const tx = await program.methods
         .presentVoucher()
         .accounts({
-          voucher: new PublicKey(voucherAddress),
+          voucher: new PublicKey(v.address),
+          mint: v.mint,
+          holderToken: v.holderToken,
           owner: keypair.publicKey,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
         } as any)
         .transaction();
 
@@ -95,17 +116,20 @@ export function MyVouchers({
     }
   }
 
-    async function handleCancel(voucherAddress: string) {
+    async function handleCancel(v: VoucherEntry) {
     if (!program) return;
     setError(null);
-    setBusy(voucherAddress);
+    setBusy(v.address);
 
     try {
       const tx = await program.methods
         .cancelPresentation()
         .accounts({
-          voucher: new PublicKey(voucherAddress),
+          voucher: new PublicKey(v.address),
+          mint: v.mint,
+          holderToken: v.holderToken,
           owner: keypair.publicKey,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
         } as any)
         .transaction();
 
@@ -118,18 +142,29 @@ export function MyVouchers({
     }
   }
 
-    async function handleGift(voucherAddress: string, recipient: string) {
+    async function handleGift(v: VoucherEntry, recipient: string) {
     if (!program) return;
     setError(null);
-    setBusy(voucherAddress);
+    setBusy(v.address);
 
     try {
       const newOwner = new PublicKey(recipient);
+      // This moves the actual NFT. If the recipient has never held this
+      // token, the program creates their token account and the relayer pays
+      // for it, so they don't need any SOL to receive a gift.
       const tx = await program.methods
-        .transferVoucher(newOwner)
+        .transferVoucher()
         .accounts({
-          voucher: new PublicKey(voucherAddress),
+          voucher: new PublicKey(v.address),
+          mint: v.mint,
+          fromToken: v.holderToken,
+          toToken: tokenAccountFor(newOwner, v.mint),
+          newOwner,
           owner: keypair.publicKey,
+          relayer: RELAYER_PUBLIC_KEY,
+          tokenProgram: TOKEN_2022_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
         } as any)
         .transaction();
 
@@ -159,21 +194,21 @@ export function MyVouchers({
             <span className="font-mono font-medium text-ink">Voucher #{v.voucherId}</span>
             <span
               className={`font-mono text-xs px-2 py-0.5 rounded-full ${
-                v.pendingRedemption
+                v.presented
                   ? "bg-stamp-red/10 text-stamp-red"
                   : "bg-quiet-green/10 text-quiet-green"
               }`}
             >
-              {v.pendingRedemption ? "Presented" : "Ready"}
+              {v.presented ? "Presented" : "Ready"}
             </span>
           </div>
 
-          {!v.pendingRedemption && (
+          {!v.presented && (
             <>
               <button
                 className="border border-ink text-ink rounded-md py-1.5 text-sm disabled:opacity-50"
                 disabled={busy === v.address}
-                onClick={() => handlePresent(v.address)}
+                onClick={() => handlePresent(v)}
               >
                 {busy === v.address ? "Presenting…" : "Present to merchant"}
               </button>
@@ -190,7 +225,7 @@ export function MyVouchers({
                 <button
                   className="border border-line rounded-md px-3 text-sm disabled:opacity-50"
                   disabled={busy === v.address}
-                  onClick={() => handleGift(v.address, giftAddress[v.address] ?? "")}
+                  onClick={() => handleGift(v, giftAddress[v.address] ?? "")}
                 >
                   {busy === v.address ? "Sending…" : "Gift"}
                 </button>
@@ -198,11 +233,11 @@ export function MyVouchers({
             </>
           )}
 
-          {v.pendingRedemption && (
+          {v.presented && (
             <button
               className="border border-line rounded-md py-1.5 text-sm disabled:opacity-50"
               disabled={busy === v.address}
-              onClick={() => handleCancel(v.address)}
+              onClick={() => handleCancel(v)}
             >
               {busy === v.address ? "Cancelling…" : "Cancel"}
             </button>

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useConnection } from "@solana/wallet-adapter-react";
+import { useConnection } from "@/components/WalletContextProvider";
 import { Program, AnchorProvider, setProvider } from "@anchor-lang/core";
 import { Keypair, Transaction, VersionedTransaction } from "@solana/web3.js";
 import idl from "./loyalty.json";

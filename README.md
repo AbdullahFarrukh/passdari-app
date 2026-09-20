@@ -30,8 +30,10 @@ since only a merchant's own choice to register creates a `Business` at all.
 Every card, voucher, receipt and business is an account on Solana, so the app
 shows its real address wherever it appears, with a button to copy it and a link to
 Solana Explorer (`components/ui/OnChainId.tsx`). A voucher is a Token-2022 NFT,
-so its ticket also shows the NFT's mint and the token account that holds it. The
-top bar shows which network the app runs on, and the footer shows the program's
+so its ticket also shows the NFT's mint and the token account that holds it. A
+stamp card has its own NFT too (soulbound: it can't be sent to another wallet, and it
+is burned when the card is cashed in), shown as a "Card NFT" line and address on the
+card. The top bar shows which network the app runs on, and the footer shows the program's
 address. The links point at devnet by default; set `NEXT_PUBLIC_SOLANA_CLUSTER`
 to `localnet` or `mainnet-beta` to change them (`lib/explorer.ts`).
 
@@ -66,7 +68,8 @@ Create `.env.local`:
 
 **Point it at devnet** (what the live site does): set the two RPC addresses to a
 devnet endpoint and fund the relayer with a few devnet SOL. A voucher costs the
-relayer about 0.008 SOL.
+relayer about 0.008 SOL. A card NFT costs about 0.006 SOL while it exists, all of
+which comes back when the card is cashed in.
 
 **Or run everything locally:** build the program in the program repo
 (`anchor build`), start a validator with it loaded, and fund the relayer:
@@ -96,7 +99,7 @@ dev server refuses `127.0.0.1` and the page never becomes interactive. Customer:
 
 **Merchant:** registration (with a panel explaining that the business becomes an account on Solana), then a dashboard: the business account's address, four counters (cards registered, stamps issued, rewards given, vouchers pending) that stay current on their own, "New sale" with a one-time receipt as a QR code, its own on-chain address and how long it stays valid, the list of presented vouchers with each holder and NFT and a Redeem button (redeeming burns the NFT), top loyal customers by name and by *rewards earned*, not raw stamp count, a "Clean up expired receipts" button that reclaims rent back to the relayer, and an AI copilot chat bubble with three tested, clickable questions. A "Demo tools" fold holds a button that lowers the reward threshold to 1 for demos.
 
-**Customer:** sign up / sign in / account recovery via backup phrase, a header showing the wallet (a picture made from its address, the address itself, and an "About your wallet" explanation), the recovery phrase shown once with a button to dismiss it, profile stats, a claim panel (camera QR scanning with manual entry fallback, which also shows which merchant a pasted code came from), "My cards" with a real stamp-row visual, stamps earned and rewards earned, each card's own address, and Token-2022 NFT vouchers drawn as tickets that can be presented, cancelled or gifted (the list refreshes by itself while a voucher is presented, so a redeemed one disappears without a reload), plus a directory of the customer's own participating businesses.
+**Customer:** sign up / sign in / account recovery via backup phrase, a header showing the wallet (a picture made from its address, the address itself, and an "About your wallet" explanation), the recovery phrase shown once with a button to dismiss it, profile stats, a claim panel (camera QR scanning with manual entry fallback, which also shows which merchant a pasted code came from), "My cards" with a real stamp-row visual, stamps earned and rewards earned, each card's own address, a "Card NFT in your wallet" line with its address (the claim that gives a card its first stamp also creates the NFT, in the same transaction, and cashing in burns it; the line says "No card NFT right now" until the next stamp brings a new one), and Token-2022 NFT vouchers drawn as tickets that can be presented, cancelled or gifted (the list refreshes by itself while a voucher is presented, so a redeemed one disappears without a reload), plus a directory of the customer's own participating businesses.
 
 ## Architecture notes
 
@@ -129,7 +132,7 @@ The app and the program on devnet have to stay in step: a program upgrade that c
 - The AI copilot's live-fallback templates only cover its three fixed questions; a freely-typed question that fails gets an honest "temporarily unavailable" message instead.
 - Purchase-band distribution (small/medium/large) isn't available to the AI copilot — the exact band is discarded once a receipt is claimed, by design, for customer privacy.
 - A customer can set their own display name to any text, and names are passed to the AI copilot. The worst this can do is change the wording of an answer only that merchant sees.
-- The voucher NFT's metadata link points at a small page (`/v/<mint>`) with a description but no image yet.
+- The voucher and card NFTs' metadata links point at small pages (`/v/<mint>`, `/c/<mint>`) with a description but no image yet.
 - Lists refresh by checking every few seconds (the presented-voucher lists), not by subscription.
 
 ## The relayer's operational story

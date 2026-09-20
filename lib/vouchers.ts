@@ -68,7 +68,7 @@ function readTokenAccount(
 }
 
 // Everything a customer's wallet holds that looks like a voucher: exactly one
-// token with no decimals. The caller still has to check each mint really is
+// token with no decimals that can be moved. The caller still has to check each mint really is
 // one of our vouchers, since anyone can send any NFT to any wallet.
 export async function listHeldNfts(
   connection: Connection,
@@ -81,7 +81,9 @@ export async function listHeldNfts(
   return value
     .filter(({ account }) => {
       const info = account.data.parsed.info;
-      return info.tokenAmount.decimals === 0 && info.tokenAmount.amount === "1";
+      // Stamp card NFTs can't be moved (the token program marks their accounts), and they are not vouchers.
+      const soulbound = info.extensions?.some((e: { extension: string }) => e.extension === "nonTransferableAccount");
+      return !soulbound && info.tokenAmount.decimals === 0 && info.tokenAmount.amount === "1";
     })
     .map(({ pubkey, account }) => ({
       mint: new PublicKey(account.data.parsed.info.mint),

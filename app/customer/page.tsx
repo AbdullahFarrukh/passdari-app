@@ -6,6 +6,8 @@ import { signUp, signIn, recoverAccount } from "@/lib/customerAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
 import { saveDisplayName } from "@/lib/displayName";
+import { cardMetadataUri, cardMintExists, cardMintPda } from "@/lib/cardNft";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, tokenAccountFor } from "@/lib/vouchers";
 import { MyCards } from "@/components/MyCards";
 import { MyVouchers } from "@/components/MyVouchers";
 import { BusinessDirectory } from "@/components/BusinessDirectory";
@@ -205,7 +207,15 @@ export default function CustomerPage() {
         program.programId
       );
 
-      const tx = await program.methods
+      // The stamp card is also an NFT in the customer's wallet. A card gets its NFT with its first stamp, and
+      // a new one with the first stamp after cashing in, so when the card's current NFT isn't there yet the
+      // same transaction makes it, and the customer signs once for both.
+      const connection = program.provider.connection;
+      const existingCard = await program.account.loyaltyCard.fetchNullable(cardPda);
+      const cardMint = cardMintPda(program.programId, cardPda, existingCard?.nftCycle ?? 0);
+      const needsCardNft = !(await cardMintExists(connection, cardMint));
+
+      let claim = program.methods
         .claimReceipt(Array.from(secretBytes))
         .accounts({
           business: businessPda,
@@ -214,8 +224,27 @@ export default function CustomerPage() {
           customer: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
           systemProgram: SystemProgram.programId,
-        } as any)
-        .transaction();
+        } as any);
+
+      if (needsCardNft) {
+        const mintCardNft = await program.methods
+          .mintCardNft(cardMetadataUri(cardMint, window.location.origin))
+          .accounts({
+            business: businessPda,
+            card: cardPda,
+            mint: cardMint,
+            customerToken: tokenAccountFor(keypair.publicKey, cardMint),
+            customer: keypair.publicKey,
+            relayer: RELAYER_PUBLIC_KEY,
+            tokenProgram: TOKEN_2022_PROGRAM_ID,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+          } as any)
+          .instruction();
+        claim = claim.postInstructions([mintCardNft]);
+      }
+
+      const tx = await claim.transaction();
 
       tx.feePayer = RELAYER_PUBLIC_KEY;
       const { blockhash } = await program.provider.connection.getLatestBlockhash();

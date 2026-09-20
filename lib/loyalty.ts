@@ -287,6 +287,130 @@ export type Loyalty = {
       ]
     },
     {
+      "name": "mintCardNft",
+      "discriminator": [
+        234,
+        240,
+        66,
+        205,
+        104,
+        91,
+        164,
+        223
+      ],
+      "accounts": [
+        {
+          "name": "business",
+          "relations": [
+            "card"
+          ]
+        },
+        {
+          "name": "card",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "business"
+              },
+              {
+                "kind": "account",
+                "path": "customer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "(the card and its current cycle), and the account is set up by hand",
+            "because Anchor can't declare the \"can't be moved\" extension."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  114,
+                  100,
+                  95,
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "card"
+              },
+              {
+                "kind": "account",
+                "path": "card.nft_cycle",
+                "account": "loyaltyCard"
+              }
+            ]
+          }
+        },
+        {
+          "name": "customerToken",
+          "docs": [
+            "associated token program, which checks that this is the right address."
+          ],
+          "writable": true
+        },
+        {
+          "name": "customer",
+          "docs": [
+            "The customer receiving the card NFT. Signs to authorize it, but pays",
+            "nothing."
+          ],
+          "signer": true,
+          "relations": [
+            "card"
+          ]
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "The relayer, covering the rent for the mint and the token account."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        },
+        {
+          "name": "associatedTokenProgram",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ]
+    },
+    {
       "name": "mintVoucher",
       "discriminator": [
         32,
@@ -450,6 +574,49 @@ export type Loyalty = {
               ]
             }
           }
+        },
+        {
+          "name": "cardMint",
+          "docs": [
+            "here (by the card and its cycle); if nothing exists there the card has",
+            "no NFT yet and this step is skipped."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  114,
+                  100,
+                  95,
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "card"
+              },
+              {
+                "kind": "account",
+                "path": "card.nft_cycle",
+                "account": "loyaltyCard"
+              }
+            ]
+          }
+        },
+        {
+          "name": "cardToken",
+          "docs": [
+            "the customer's associated token account for that mint; it may be",
+            "missing if there is no NFT or the customer already closed it."
+          ],
+          "writable": true
         },
         {
           "name": "customer",
@@ -1225,7 +1392,13 @@ export type Loyalty = {
             "type": "u32"
           },
           {
-            "name": "redemptions",
+            "name": "nftCycle",
+            "docs": [
+              "Which card NFT is the current one. Part of the NFT's mint address, so a",
+              "fresh NFT gets a fresh address each time the last one is burned. This",
+              "used to be `redemptions` (unused since vouchers became NFTs); the size",
+              "is the same, so cards that already exist keep working."
+            ],
             "type": "u32"
           },
           {

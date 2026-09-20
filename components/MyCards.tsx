@@ -7,6 +7,7 @@ import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
 import { Button } from "@/components/ui/Button";
 import { OnChainId } from "@/components/ui/OnChainId";
+import { CubeIcon } from "@/components/ui/icons";
 import { StampRow } from "@/components/ui/StampRow";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -15,6 +16,7 @@ import {
   voucherMetadataUri,
   voucherMintPda,
 } from "@/lib/vouchers";
+import { cardMintPda, findCardNfts } from "@/lib/cardNft";
 
 type CardWithBusiness = {
   cardAddress: string;
@@ -22,7 +24,9 @@ type CardWithBusiness = {
   businessKey: string;
   stamps: number;
   stampsRequired: number;
-  redemptions: number;
+  // Which of the card's NFTs is the current one (see lib/cardNft.ts), and whether the wallet holds it right now.
+  nftCycle: number;
+  cardNft: { mint: string; held: boolean } | null;
   lifetimeStamps: number;
   rewardsEarned: number;
   name: string;
@@ -42,7 +46,8 @@ function toCard(
     businessKey: (entry.account.business as PublicKey).toBase58(),
     stamps,
     stampsRequired: business.stampsRequired as number,
-    redemptions: entry.account.redemptions as number,
+    nftCycle: entry.account.nftCycle as number,
+    cardNft: null,
     lifetimeStamps,
     // Stamps only leave a card when they are spent on a voucher, so this is how many rewards the customer has earned.
     rewardsEarned: stampsPerReward > 0 ? Math.floor((lifetimeStamps - stamps) / stampsPerReward) : 0,
@@ -71,35 +76,7 @@ export function MyCards({
   const [mintingFor, setMintingFor] = useState<string | null>(null);
   const [mintError, setMintError] = useState<string | null>(null);
 
-  async function load() {
-    if (!program) return;
-
-    const myCards = await program.account.loyaltyCard.all([
-      {
-        memcmp: {
-          offset: 40,
-          bytes: keypair.publicKey.toBase58(),
-        },
-      },
-    ]);
-
-    const withBusinessInfo = await Promise.all(
-      myCards.map(async (entry) => {
-        const business = await program.account.business.fetch(entry.account.business as any);
-        return toCard(entry, business);
-      })
-    );
-
-    setCards(withBusinessInfo);
-    onLoaded?.(withBusinessInfo.length);
-
-    const totalStamps = withBusinessInfo.reduce((sum, c) => sum + c.stamps, 0);
-    const completedCards = withBusinessInfo.filter((c) => c.stamps >= c.stampsRequired).length;
-    const inProgressCards = withBusinessInfo.length - completedCards;
-    onStats?.({ totalStamps, completedCards, inProgressCards });
-  }
-
-    useEffect(() => {
+  useEffect(() => {
     let cancelled = false;
 
     async function loadIfStillCurrent() {
@@ -126,10 +103,28 @@ export function MyCards({
         })
       );
 
+      // Whether each card's NFT is in the wallet. If the lookup fails the cards still show, just without the
+      // NFT line.
+      let nfts: { mint: PublicKey; held: boolean }[] = [];
+      try {
+        nfts = await findCardNfts(
+          program.provider.connection,
+          program.programId,
+          keypair.publicKey,
+          withBusinessInfo.map((c) => ({ address: new PublicKey(c.cardAddress), nftCycle: c.nftCycle }))
+        );
+      } catch (err) {
+        console.error("Could not check the card NFTs:", err);
+      }
+
       if (cancelled) return;
 
-      setCards(withBusinessInfo);
-      onLoaded?.(withBusinessInfo.length);
+      const withNfts = withBusinessInfo.map((c, i) =>
+        nfts[i] ? { ...c, cardNft: { mint: nfts[i].mint.toBase58(), held: nfts[i].held } } : c
+      );
+
+      setCards(withNfts);
+      onLoaded?.(withNfts.length);
 
       const totalStamps = withBusinessInfo.reduce((sum, c) => sum + c.stamps, 0);
       const completedCards = withBusinessInfo.filter((c) => c.stamps >= c.stampsRequired).length;
@@ -163,6 +158,12 @@ export function MyCards({
       const voucherMint = voucherMintPda(program.programId, card.businessAddress, voucherId);
       const customerToken = tokenAccountFor(keypair.publicKey, voucherMint);
 
+      // Cashing in spends the card's stamps, so the card's own NFT is burned in the same step. A card that has
+      // no NFT (stamped before card NFTs existed) still works: the program skips it when nothing is there.
+      const cardAddress = new PublicKey(card.cardAddress);
+      const cardMint = cardMintPda(program.programId, cardAddress, card.nftCycle);
+      const cardToken = tokenAccountFor(keypair.publicKey, cardMint);
+
       // Step 1: mint — this creates new accounts (the voucher, its NFT and
       // the customer's token account), so it goes through the relayer, same
       // as every other account-creating instruction.
@@ -170,10 +171,12 @@ export function MyCards({
         .mintVoucher(voucherId, voucherMetadataUri(voucherMint, window.location.origin))
         .accounts({
           business: card.businessAddress,
-          card: new PublicKey(card.cardAddress),
+          card: cardAddress,
           voucher: voucherPda,
           mint: voucherMint,
           customerToken,
+          cardMint,
+          cardToken,
           customer: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
           tokenProgram: TOKEN_2022_PROGRAM_ID,
@@ -267,6 +270,21 @@ export function MyCards({
               <StampRow total={card.stampsRequired} filled={card.stamps} />
             </div>
 
+            {card.cardNft && (
+              <p className="mx-4 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+                {card.cardNft.held ? (
+                  <>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-verified/10 px-2 py-0.5 font-medium text-verified">
+                      <CubeIcon size={12} /> Card NFT in your wallet
+                    </span>
+                    <span>Can&rsquo;t be sent to anyone else. Burned when you cash in.</span>
+                  </>
+                ) : (
+                  <span>No card NFT right now. Your next stamp brings one.</span>
+                )}
+              </p>
+            )}
+
             {isFull && (
               <div className="mx-4 mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-stamp-red/10 p-3">
                 <p className="min-w-40 flex-1 text-sm font-medium text-stamp-red">Card complete. Your reward is ready.</p>
@@ -289,6 +307,7 @@ export function MyCards({
 
             <div className="flex flex-wrap gap-2 border-t border-line px-4 py-3">
               <OnChainId label="Card" address={card.cardAddress} />
+              {card.cardNft?.held && <OnChainId label="Card NFT" address={card.cardNft.mint} />}
               <OnChainId label="Business" address={card.businessKey} />
             </div>
           </article>

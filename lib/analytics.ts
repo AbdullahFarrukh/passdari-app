@@ -4,7 +4,10 @@ import idl from "./loyalty.json";
 import { getCustomerNames } from "./db";
 
 const PROGRAM_ID = new PublicKey("HWvvvwSEounpNXcbD4JUNmniB5YxTcFNYoAestzJJCuL");
-const connection = new Connection(process.env.HELIUS_RPC_URL ?? "https://api.devnet.solana.com");
+// Read at "confirmed", like the app's screens (see WalletContextProvider.tsx).
+// At the default "finalized" this trails by about 13 seconds, so a business
+// registered a moment ago wasn't found and the newest stamps were missing.
+const connection = new Connection(process.env.HELIUS_RPC_URL ?? "https://api.devnet.solana.com", "confirmed");
 const coder = new BorshCoder(idl as any);
 
 export async function getBusinessAnalytics(ownerAddress: string) {

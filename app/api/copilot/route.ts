@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { PublicKey } from "@solana/web3.js";
 import { getBusinessAnalytics } from "@/lib/analytics";
+import { verifyCopilotRequest } from "@/lib/copilotAuth";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -113,6 +114,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: `question must be ${MAX_QUESTION_LENGTH} characters or fewer` },
       { status: 400 }
+    );
+  }
+
+  // A business's public key is public on-chain, so it proves nothing on its
+  // own. Only the owner's browser can sign for it. This has to come before
+  // anything expensive: reading the analytics can take up to about a thousand
+  // lookups on the chain, and answering costs a paid AI call.
+  const auth = verifyCopilotRequest({
+    owner,
+    question,
+    timestamp: body?.timestamp,
+    signature: body?.signature,
+  });
+  if (!auth.ok) {
+    return NextResponse.json(
+      {
+        error:
+          auth.reason === "expired"
+            ? "This request has expired. Please try again, and check that your device's clock is correct."
+            : "We couldn't confirm this request came from the business owner.",
+      },
+      { status: 401 }
     );
   }
 

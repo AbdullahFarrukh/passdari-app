@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
 import { setCustomerName, getCustomerNames } from "@/lib/db";
+import { verifyDisplayName } from "@/lib/nameAuth";
 
 const MAX_NAME_LENGTH = 50;
 const MAX_ADDRESSES_PER_LOOKUP = 100;
@@ -55,7 +56,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  setCustomerName(address, trimmedName);
+  // A wallet's address is public, so anyone could otherwise set anyone's name.
+  // Only the wallet's owner can sign for it. This checks the name exactly as
+  // the browser sent (and signed) it, before trimming.
+  const auth = verifyDisplayName({
+    address,
+    name,
+    timestamp: body?.timestamp,
+    signature: body?.signature,
+  });
+  if (!auth.ok) {
+    return NextResponse.json(
+      {
+        error:
+          auth.reason === "expired"
+            ? "This request has expired. Please try again, and check that your device's clock is correct."
+            : "We couldn't confirm this name change came from the wallet's owner.",
+      },
+      { status: 401 }
+    );
+  }
+
+  const saved = await setCustomerName(address, trimmedName);
+  if (!saved) {
+    return NextResponse.json({ error: "Display names are temporarily unavailable." }, { status: 503 });
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -71,6 +96,6 @@ export async function GET(request: NextRequest) {
     .filter(isValidSolanaAddress)
     .slice(0, MAX_ADDRESSES_PER_LOOKUP);
 
-  const names = getCustomerNames(addresses);
+  const names = await getCustomerNames(addresses);
   return NextResponse.json({ names });
 }

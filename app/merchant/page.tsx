@@ -243,7 +243,7 @@ export default function MerchantPage() {
             onDone={checkForBusiness}
           />
 
-          <MerchantCopilot ownerAddress={keypair.publicKey.toBase58()} />
+          <MerchantCopilot keypair={keypair} />
                     <ReclaimExpiredReceipts keypair={keypair} />
 
           <PresentedVouchers

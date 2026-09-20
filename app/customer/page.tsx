@@ -266,18 +266,20 @@ export default function CustomerPage() {
       {newMnemonic && <MnemonicNotice phrase={newMnemonic} onDismiss={() => setNewMnemonic(null)} />}
 
       {keypair && (
-        <div className="grid w-full max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:grid-rows-[auto_1fr]">
-          <div className="lg:col-span-2">
-            <StatStrip
-              items={[
-                { label: "Total stamps", value: stats.totalStamps },
-                { label: "Vouchers held", value: stats.voucherCount },
-                { label: "Cards completed", value: stats.completedCards },
-                { label: "In progress", value: stats.inProgressCards },
-              ]}
-            />
-          </div>
+        <div className="w-full max-w-6xl">
+          <StatStrip
+            items={[
+              { label: "Total stamps", value: stats.totalStamps },
+              { label: "Vouchers held", value: stats.voucherCount },
+              { label: "Cards completed", value: stats.completedCards },
+              { label: "In progress", value: stats.inProgressCards },
+            ]}
+          />
+        </div>
+      )}
 
+      {keypair && (
+        <div className="grid w-full max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:grid-rows-[auto_1fr]">
           <div className="lg:col-start-1 lg:row-start-1">
             <ClaimPanel
               code={secretHex}

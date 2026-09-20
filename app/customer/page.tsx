@@ -9,7 +9,11 @@ import { saveDisplayName } from "@/lib/displayName";
 import { MyCards } from "@/components/MyCards";
 import { MyVouchers } from "@/components/MyVouchers";
 import { BusinessDirectory } from "@/components/BusinessDirectory";
-import { QrScanner } from "@/components/QrScanner";
+import { ClaimPanel } from "@/components/ClaimPanel";
+import { StatStrip } from "@/components/ui/StatStrip";
+import { AuthPanel } from "@/components/AuthPanel";
+import { AccountBar } from "@/components/AccountBar";
+import { MnemonicNotice } from "@/components/MnemonicNotice";
 
 const CLOCK_SYSVAR = new PublicKey("SysvarC1ock11111111111111111111111111111111");
 
@@ -237,178 +241,81 @@ export default function CustomerPage() {
   }
 
   return (
-    <div className="flex flex-col items-center min-h-screen gap-6 p-8 bg-paper text-charcoal">
+    <div className="flex flex-col items-center gap-6 px-4 py-8 text-charcoal">
       {!keypair && (
-        <div className="flex flex-col items-center gap-2 w-full max-w-sm mt-16">
-          <p className="font-mono text-lg text-ink mb-2">Loyalty</p>
-          <input
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
-          />
-          <input
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
-          />
-          <div className="flex gap-2 w-full">
-            <button
-              className="flex-1 bg-ink text-paper rounded-md py-2 text-sm font-medium"
-              onClick={handleSignUp}
-            >
-              Sign up
-            </button>
-            <button
-              className="flex-1 border border-ink text-ink rounded-md py-2 text-sm font-medium"
-              onClick={handleSignIn}
-            >
-              Sign in
-            </button>
-          </div>
-          <button
-            className="text-xs text-charcoal/60 underline"
-            onClick={() => setShowRecovery((s) => !s)}
-          >
-            Forgot password?
-          </button>
-          {authError && <p className="text-stamp-red text-sm">{authError}</p>}
-
-          {showRecovery && (
-            <div className="flex flex-col items-center gap-2 border-t border-line pt-4 w-full mt-2">
-              <p className="text-sm font-semibold text-ink">Recover your account</p>
-              <input
-                placeholder="Username to recover"
-                value={recoveryUsername}
-                onChange={(e) => setRecoveryUsername(e.target.value)}
-                className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
-              />
-              <textarea
-                placeholder="Your 12-word phrase"
-                value={recoveryPhrase}
-                onChange={(e) => setRecoveryPhrase(e.target.value)}
-                className="w-full border border-line rounded-md px-3 py-2 bg-white/60 font-mono text-sm"
-                rows={2}
-              />
-              <input
-                placeholder="New password"
-                type="password"
-                value={recoveryPassword}
-                onChange={(e) => setRecoveryPassword(e.target.value)}
-                className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
-              />
-              <button
-                className="w-full bg-ink text-paper rounded-md py-2 text-sm font-medium"
-                onClick={handleRecover}
-              >
-                Recover account
-              </button>
-              {recoveryError && <p className="text-stamp-red text-sm">{recoveryError}</p>}
-            </div>
-          )}
-        </div>
+        <AuthPanel
+          role="customer"
+          username={username} onUsername={setUsername}
+          password={password} onPassword={setPassword}
+          onSignUp={handleSignUp} onSignIn={handleSignIn}
+          error={authError}
+          showRecovery={showRecovery} onToggleRecovery={() => setShowRecovery((s) => !s)}
+          recoveryUsername={recoveryUsername} onRecoveryUsername={setRecoveryUsername}
+          recoveryPhrase={recoveryPhrase} onRecoveryPhrase={setRecoveryPhrase}
+          recoveryPassword={recoveryPassword} onRecoveryPassword={setRecoveryPassword}
+          onRecover={handleRecover} recoveryError={recoveryError}
+        />
       )}
+
+      {keypair && <h1 className="sr-only">Your stamp cards and vouchers</h1>}
 
       {keypair && (
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-sm font-medium">Signed in as {username}</p>
-          <p className="text-xs text-charcoal/50 font-mono">{keypair.publicKey.toBase58()}</p>
-          <button className="text-xs text-charcoal/60 underline" onClick={handleSignOut}>
-            Sign out
-          </button>
-        </div>
+        <AccountBar username={username} address={keypair.publicKey.toBase58()} onSignOut={handleSignOut} />
       )}
+
+      {newMnemonic && <MnemonicNotice phrase={newMnemonic} onDismiss={() => setNewMnemonic(null)} />}
 
       {keypair && (
-        <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-          <div className="border border-line rounded-lg p-3 bg-white/60">
-            <p className="text-xs text-charcoal/60 mb-1">Total stamps</p>
-            <p className="font-mono font-semibold text-2xl text-ink">{stats.totalStamps}</p>
+        <div className="grid w-full max-w-6xl items-start gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:grid-rows-[auto_1fr]">
+          <div className="lg:col-span-2">
+            <StatStrip
+              items={[
+                { label: "Total stamps", value: stats.totalStamps },
+                { label: "Vouchers held", value: stats.voucherCount },
+                { label: "Cards completed", value: stats.completedCards },
+                { label: "In progress", value: stats.inProgressCards },
+              ]}
+            />
           </div>
-          <div className="border border-line rounded-lg p-3 bg-white/60">
-            <p className="text-xs text-charcoal/60 mb-1">Vouchers held</p>
-            <p className="font-mono font-semibold text-2xl text-ink">{stats.voucherCount}</p>
-          </div>
-          <div className="border border-line rounded-lg p-3 bg-white/60">
-            <p className="text-xs text-charcoal/60 mb-1">Cards completed</p>
-            <p className="font-mono font-semibold text-2xl text-ink">{stats.completedCards}</p>
-          </div>
-          <div className="border border-line rounded-lg p-3 bg-white/60">
-            <p className="text-xs text-charcoal/60 mb-1">In progress</p>
-            <p className="font-mono font-semibold text-2xl text-ink">{stats.inProgressCards}</p>
-          </div>
-        </div>
-      )}
 
-      {newMnemonic && (
-        <div className="border-2 border-stamp-red rounded-lg p-3 max-w-sm text-sm bg-white/60">
-          <p className="font-semibold text-stamp-red mb-2">
-            Write these 12 words down now. This is the only time they will ever be shown.
-          </p>
-          <p className="font-mono break-words">{newMnemonic}</p>
-        </div>
-      )}
-
-      {keypair && (
-        <div className="flex flex-col items-center gap-2 border-t border-line pt-4 w-full max-w-sm">
-          <button
-            type="button"
-            className="w-full bg-ink text-paper rounded-md py-3 text-sm font-medium flex items-center justify-center gap-2"
-            onClick={() => setShowScanner((s) => !s)}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-              <path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01" />
-            </svg>
-            {showScanner ? "Hide scanner" : "Scan to claim"}
-          </button>
-
-          {showScanner && (
-            <QrScanner
+          <div className="lg:col-start-1 lg:row-start-1">
+            <ClaimPanel
+              code={secretHex}
+              onCode={setSecretHex}
+              expiresInfo={expiresInfo}
+              onClaim={handleClaim}
+              error={claimError}
+              showScanner={showScanner}
+              onToggleScanner={() => setShowScanner((s) => !s)}
               onScan={(text) => {
                 setSecretHex(text);
                 setShowScanner(false);
               }}
             />
+          </div>
+
+          {/* On a phone the customer's own cards and vouchers come before the list of businesses. */}
+          <div className="flex flex-col gap-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            <MyCards
+              keypair={keypair}
+              refreshKey={refreshKey}
+              onChange={() => setRefreshKey((k) => k + 1)}
+              onLoaded={setCardCount}
+              onStats={(s) => setStats((prev) => ({ ...prev, ...s }))}
+            />
+            <MyVouchers
+              keypair={keypair}
+              refreshKey={refreshKey}
+              onChange={() => setRefreshKey((k) => k + 1)}
+              onCount={(count) => setStats((prev) => ({ ...prev, voucherCount: count }))}
+            />
+          </div>
+
+          {cardCount > 0 && (
+            <div className="lg:col-start-1 lg:row-start-2">
+              <BusinessDirectory keypair={keypair} />
+            </div>
           )}
-
-          <input
-            placeholder="Code (scan or paste from merchant screen)"
-            value={secretHex}
-            onChange={(e) => setSecretHex(e.target.value)}
-            className="w-full border border-line rounded-md px-3 py-2 bg-white/60 font-mono text-sm"
-          />
-          {expiresInfo && <p className="text-charcoal/60 text-sm">{expiresInfo}</p>}
-          <button
-            className="w-full bg-stamp-red text-paper rounded-md py-2 text-sm font-medium"
-            onClick={handleClaim}
-          >
-            Claim stamp
-          </button>
-          {claimError && <p className="text-stamp-red text-sm">{claimError}</p>}
-        </div>
-      )}
-
-      {keypair && (
-        <div className="flex flex-col items-center gap-6 border-t border-line pt-4 w-full">
-          <MyCards
-            keypair={keypair}
-            refreshKey={refreshKey}
-            onChange={() => setRefreshKey((k) => k + 1)}
-            onLoaded={setCardCount}
-            onStats={(s) => setStats((prev) => ({ ...prev, ...s }))}
-          />
-          <MyVouchers
-            keypair={keypair}
-            refreshKey={refreshKey}
-            onChange={() => setRefreshKey((k) => k + 1)}
-            onCount={(count) => setStats((prev) => ({ ...prev, voucherCount: count }))}
-          />
-          {cardCount > 0 && <BusinessDirectory keypair={keypair} />}
         </div>
       )}
     </div>

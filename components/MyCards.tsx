@@ -5,6 +5,9 @@ import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import BN from "bn.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
+import { Button } from "@/components/ui/Button";
+import { OnChainId } from "@/components/ui/OnChainId";
+import { StampRow } from "@/components/ui/StampRow";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
@@ -16,12 +19,37 @@ import {
 type CardWithBusiness = {
   cardAddress: string;
   businessAddress: any;
+  businessKey: string;
   stamps: number;
   stampsRequired: number;
   redemptions: number;
+  lifetimeStamps: number;
+  rewardsEarned: number;
   name: string;
   rewardLabel: string;
 };
+
+function toCard(
+  entry: { publicKey: PublicKey; account: Record<string, unknown> },
+  business: { stampsRequired: unknown; name: unknown; rewardLabel: unknown }
+): CardWithBusiness {
+  const stamps = entry.account.stamps as number;
+  const lifetimeStamps = entry.account.lifetimeStamps as number;
+  const stampsPerReward = entry.account.stampsRequiredSnapshot as number;
+  return {
+    cardAddress: entry.publicKey.toBase58(),
+    businessAddress: entry.account.business,
+    businessKey: (entry.account.business as PublicKey).toBase58(),
+    stamps,
+    stampsRequired: business.stampsRequired as number,
+    redemptions: entry.account.redemptions as number,
+    lifetimeStamps,
+    // Stamps only leave a card when they are spent on a voucher, so this is how many rewards the customer has earned.
+    rewardsEarned: stampsPerReward > 0 ? Math.floor((lifetimeStamps - stamps) / stampsPerReward) : 0,
+    name: business.name as string,
+    rewardLabel: business.rewardLabel as string,
+  };
+}
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
@@ -58,15 +86,7 @@ export function MyCards({
     const withBusinessInfo = await Promise.all(
       myCards.map(async (entry) => {
         const business = await program.account.business.fetch(entry.account.business as any);
-        return {
-          cardAddress: entry.publicKey.toBase58(),
-          businessAddress: entry.account.business,
-          stamps: entry.account.stamps as number,
-          stampsRequired: business.stampsRequired as number,
-          redemptions: entry.account.redemptions as number,
-          name: business.name as string,
-          rewardLabel: business.rewardLabel as string,
-        };
+        return toCard(entry, business);
       })
     );
 
@@ -102,15 +122,7 @@ export function MyCards({
       const withBusinessInfo = await Promise.all(
         myCards.map(async (entry) => {
           const business = await program.account.business.fetch(entry.account.business as any);
-          return {
-            cardAddress: entry.publicKey.toBase58(),
-            businessAddress: entry.account.business,
-            stamps: entry.account.stamps as number,
-            stampsRequired: business.stampsRequired as number,
-            redemptions: entry.account.redemptions as number,
-            name: business.name as string,
-            rewardLabel: business.rewardLabel as string,
-          };
+          return toCard(entry, business);
         })
       );
 
@@ -222,67 +234,67 @@ export function MyCards({
   }
 
   if (cards === null) {
-    return <p className="text-sm text-charcoal/60 font-mono">Loading your cards…</p>;
+    return <p className="font-mono text-sm text-muted">Loading your cards…</p>;
   }
 
   if (cards.length === 0) {
     return (
-      <p className="text-sm text-charcoal/60">
-        No cards yet. Scan a receipt from a business to start your first one.
-      </p>
+      <section aria-labelledby="my-cards" className="flex w-full flex-col gap-3">
+        <h2 id="my-cards" className="eyebrow">My cards</h2>
+        <p className="surface p-5 text-sm text-muted">No cards yet. Scan a receipt from a business to start your first one.</p>
+      </section>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3 w-full max-w-sm">
-      <p className="font-mono text-xs uppercase tracking-wider text-charcoal/60">My cards</p>
+    <section aria-labelledby="my-cards" className="flex w-full flex-col gap-3">
+      <h2 id="my-cards" className="eyebrow">My cards</h2>
       {cards.map((card) => {
         const isFull = card.stamps >= card.stampsRequired;
         return (
-          <div
-            key={card.cardAddress}
-            className="border border-line rounded-lg p-4 bg-white/60"
-          >
-            <div className="flex justify-between items-baseline mb-2">
-              <span className="font-mono font-medium text-ink">{card.name}</span>
-              <span className="font-mono text-xs text-charcoal/70">
-                {card.stamps} / {card.stampsRequired}
-              </span>
+          <article key={card.cardAddress} className="surface overflow-hidden">
+            <div className="flex items-start justify-between gap-3 p-4 pb-3">
+              <div className="min-w-0">
+                <h3 className="truncate font-mono text-lg font-semibold text-ink">{card.name}</h3>
+                <p className="mt-0.5 text-sm text-muted">{card.rewardLabel}</p>
+              </div>
+              <p className="shrink-0 rounded-md bg-paper-2 px-2.5 py-1 font-mono text-sm text-muted">
+                <span className="font-semibold text-ink">{card.stamps}</span> / {card.stampsRequired}
+              </p>
             </div>
 
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {Array.from({ length: card.stampsRequired }).map((_, i) => {
-                const filled = i < card.stamps;
-                return (
-                  <span
-                    key={i}
-                    className={`inline-block w-4 h-4 rounded-full border-2 ${
-                      filled
-                        ? isFull
-                          ? "bg-stamp-red border-stamp-red"
-                          : "bg-ink border-ink"
-                        : "border-line bg-transparent"
-                    }`}
-                  />
-                );
-              })}
+            <div className="px-4">
+              <StampRow total={card.stampsRequired} filled={card.stamps} />
             </div>
-
-            <p className="text-xs text-charcoal/60">{card.rewardLabel}</p>
 
             {isFull && (
-              <button
-                className="mt-3 w-full bg-stamp-red text-paper rounded-md py-2 text-sm font-medium disabled:opacity-50"
-                disabled={mintingFor === card.cardAddress}
-                onClick={() => handleGetReward(card)}
-              >
-                {mintingFor === card.cardAddress ? "Getting your reward…" : `Get my ${card.rewardLabel}`}
-              </button>
+              <div className="mx-4 mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-stamp-red/10 p-3">
+                <p className="min-w-40 flex-1 text-sm font-medium text-stamp-red">Card complete. Your reward is ready.</p>
+                <Button variant="danger" disabled={mintingFor === card.cardAddress} onClick={() => handleGetReward(card)}>
+                  {mintingFor === card.cardAddress ? "Getting your reward…" : `Get my ${card.rewardLabel}`}
+                </Button>
+              </div>
             )}
-          </div>
+
+            <dl className="mt-4 grid grid-cols-2 border-t border-line bg-paper-2/50 text-sm">
+              <div className="px-4 py-2.5">
+                <dt className="eyebrow">Stamps earned</dt>
+                <dd className="font-mono font-semibold text-ink">{card.lifetimeStamps}</dd>
+              </div>
+              <div className="border-l border-line px-4 py-2.5">
+                <dt className="eyebrow">Rewards earned</dt>
+                <dd className="font-mono font-semibold text-ink">{card.rewardsEarned}</dd>
+              </div>
+            </dl>
+
+            <div className="flex flex-wrap gap-2 border-t border-line px-4 py-3">
+              <OnChainId label="Card" address={card.cardAddress} />
+              <OnChainId label="Business" address={card.businessKey} />
+            </div>
+          </article>
         );
       })}
-      {mintError && <p className="text-stamp-red text-sm">{mintError}</p>}
-    </div>
+      {mintError && <p role="alert" className="text-sm text-stamp-red">{mintError}</p>}
+    </section>
   );
 }

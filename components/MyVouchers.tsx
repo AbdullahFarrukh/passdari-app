@@ -11,6 +11,9 @@ import {
   listHeldNfts,
   tokenAccountFor,
 } from "@/lib/vouchers";
+import { Button } from "@/components/ui/Button";
+import { OnChainId } from "@/components/ui/OnChainId";
+import { TicketIcon } from "@/components/ui/icons";
 
 type VoucherEntry = {
   address: string;
@@ -18,7 +21,14 @@ type VoucherEntry = {
   mint: PublicKey;
   holderToken: PublicKey;
   presented: boolean;
+  businessName: string;
+  rewardLabel: string;
+  mintedAt: number;
 };
+
+// While a voucher is presented, its holder is waiting for the merchant to redeem it, so the list refreshes by
+// itself. Once it is redeemed the NFT is burned and the ticket disappears without anyone having to reload.
+const REFRESH_WHILE_PRESENTED_MS = 5000;
 
 export function MyVouchers({
   keypair,
@@ -36,9 +46,11 @@ export function MyVouchers({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [giftAddress, setGiftAddress] = useState<Record<string, string>>({});
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     if (!program) return;
+    let cancelled = false;
 
     async function load() {
       // A voucher belongs to whoever holds its token, so start from the
@@ -50,27 +62,59 @@ export function MyVouchers({
       // really are our vouchers.
       const matched = await Promise.all(
         held.map(async (nft) => {
-          const vouchers = await program!.account.voucher.all([
+          const found = await program!.account.voucher.all([
             { memcmp: { offset: VOUCHER_MINT_OFFSET, bytes: nft.mint.toBase58() } },
           ]);
-          return vouchers.map((entry) => ({ entry, nft }));
+          return found.map((entry) => ({ entry, nft }));
+        })
+      );
+      const found = matched.flat();
+
+      // The ticket names the reward and the business, so look each business up once.
+      const businessKeys = [...new Set(found.map(({ entry }) => (entry.account.business as PublicKey).toBase58()))];
+      const businesses = new Map<string, { name: string; rewardLabel: string }>();
+      await Promise.all(
+        businessKeys.map(async (key) => {
+          try {
+            const business = await program!.account.business.fetch(new PublicKey(key));
+            businesses.set(key, { name: business.name as string, rewardLabel: business.rewardLabel as string });
+          } catch {
+            // A ticket without a business name is still a valid voucher.
+          }
         })
       );
 
-      const mapped = matched.flat().map(({ entry, nft }) => ({
-        address: entry.publicKey.toBase58(),
-        voucherId: (entry.account.voucherId as any).toString(),
-        mint: nft.mint,
-        holderToken: nft.tokenAccount,
-        presented: nft.frozen,
-      }));
+      const mapped = found.map(({ entry, nft }) => {
+        const business = businesses.get((entry.account.business as PublicKey).toBase58());
+        return {
+          address: entry.publicKey.toBase58(),
+          voucherId: (entry.account.voucherId as { toString: () => string }).toString(),
+          mint: nft.mint,
+          holderToken: nft.tokenAccount,
+          presented: nft.frozen,
+          businessName: business?.name ?? "Unknown business",
+          rewardLabel: business?.rewardLabel ?? "Reward",
+          mintedAt: Number((entry.account.mintedAt as { toString: () => string }).toString()),
+        };
+      });
 
+      if (cancelled) return;
       setVouchers(mapped);
       onCount?.(mapped.length);
     }
 
     load();
-  }, [program, refreshKey]);
+    return () => {
+      cancelled = true;
+    };
+  }, [program, refreshKey, tick]);
+
+  const anyPresented = vouchers?.some((v) => v.presented) ?? false;
+  useEffect(() => {
+    if (!anyPresented) return;
+    const interval = setInterval(() => setTick((t) => t + 1), REFRESH_WHILE_PRESENTED_MS);
+    return () => clearInterval(interval);
+  }, [anyPresented]);
 
   const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
@@ -110,13 +154,13 @@ export function MyVouchers({
       await relaySign(tx);
       onChange();
     } catch (err) {
-            setError(translateError(err));
+      setError(translateError(err));
     } finally {
       setBusy(null);
     }
   }
 
-    async function handleCancel(v: VoucherEntry) {
+  async function handleCancel(v: VoucherEntry) {
     if (!program) return;
     setError(null);
     setBusy(v.address);
@@ -136,13 +180,13 @@ export function MyVouchers({
       await relaySign(tx);
       onChange();
     } catch (err) {
-            setError(translateError(err));
+      setError(translateError(err));
     } finally {
       setBusy(null);
     }
   }
 
-    async function handleGift(v: VoucherEntry, recipient: string) {
+  async function handleGift(v: VoucherEntry, recipient: string) {
     if (!program) return;
     setError(null);
     setBusy(v.address);
@@ -171,80 +215,81 @@ export function MyVouchers({
       await relaySign(tx);
       onChange();
     } catch (err) {
-            setError(translateError(err));
+      setError(translateError(err));
     } finally {
       setBusy(null);
     }
   }
 
   if (vouchers === null) return null;
-  if (vouchers.length === 0) {
-    return <p className="text-sm text-charcoal/60">No vouchers yet.</p>;
-  }
 
   return (
-    <div className="flex flex-col gap-2 w-full max-w-sm">
-      <p className="font-mono text-xs uppercase tracking-wider text-charcoal/60">My vouchers</p>
+    <section aria-labelledby="my-vouchers" className="flex w-full flex-col gap-3">
+      <h2 id="my-vouchers" className="eyebrow">My vouchers</h2>
+
+      {vouchers.length === 0 && <p className="surface p-5 text-sm text-muted">No vouchers yet.</p>}
+
       {vouchers.map((v) => (
-        <div
-          key={v.address}
-          className="border border-line rounded-lg p-3 text-sm flex flex-col gap-2 bg-white/60"
-        >
-          <div className="flex justify-between items-baseline">
-            <span className="font-mono font-medium text-ink">Voucher #{v.voucherId}</span>
-            <span
-              className={`font-mono text-xs px-2 py-0.5 rounded-full ${
-                v.presented
-                  ? "bg-stamp-red/10 text-stamp-red"
-                  : "bg-quiet-green/10 text-quiet-green"
-              }`}
-            >
-              {v.presented ? "Presented" : "Ready"}
-            </span>
+        <article key={v.address} className="surface overflow-hidden">
+          <div className="flex items-stretch">
+            <div className="min-w-0 flex-1 p-4">
+              <p className="eyebrow flex items-center gap-1.5"><TicketIcon size={14} /> Token-2022 NFT</p>
+              <h3 className="mt-1.5 text-lg font-semibold text-ink">{v.rewardLabel}</h3>
+              <p className="mt-0.5 text-sm text-muted">
+                {v.businessName} · <span className="font-mono">Voucher #{v.voucherId}</span>
+              </p>
+              <p className="mt-1 text-xs text-muted">Minted {new Date(v.mintedAt * 1000).toLocaleDateString()}</p>
+            </div>
+            <div className="flex items-center border-l-2 border-dashed border-line-strong px-4">
+              <span
+                className={`-rotate-6 rounded-md border-2 px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-widest ${
+                  v.presented ? "border-stamp-red text-stamp-red" : "border-verified text-verified"
+                }`}
+              >
+                {v.presented ? "Presented" : "Ready"}
+              </span>
+            </div>
           </div>
 
-          {!v.presented && (
-            <>
-              <button
-                className="border border-ink text-ink rounded-md py-1.5 text-sm disabled:opacity-50"
-                disabled={busy === v.address}
-                onClick={() => handlePresent(v)}
-              >
-                {busy === v.address ? "Presenting…" : "Present to merchant"}
-              </button>
+          <div className="flex flex-col gap-3 border-t border-line p-4">
+            {!v.presented ? (
+              <>
+                <Button disabled={busy === v.address} onClick={() => handlePresent(v)}>
+                  {busy === v.address ? "Presenting…" : "Present to merchant"}
+                </Button>
+                <div className="flex gap-2">
+                  <input
+                    aria-label="Recipient's wallet address"
+                    placeholder="Recipient's address"
+                    className="field min-w-0 flex-1 font-mono text-sm"
+                    value={giftAddress[v.address] ?? ""}
+                    onChange={(e) => setGiftAddress((prev) => ({ ...prev, [v.address]: e.target.value }))}
+                  />
+                  <Button variant="outline" disabled={busy === v.address} onClick={() => handleGift(v, giftAddress[v.address] ?? "")}>
+                    {busy === v.address ? "Sending…" : "Gift"}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted">
+                  Show this to the merchant. While it is presented it can&apos;t be moved. When they redeem it, the NFT is burned.
+                </p>
+                <Button variant="outline" disabled={busy === v.address} onClick={() => handleCancel(v)}>
+                  {busy === v.address ? "Cancelling…" : "Cancel"}
+                </Button>
+              </>
+            )}
+          </div>
 
-              <div className="flex gap-2">
-                <input
-                  placeholder="Recipient's address"
-                  className="flex-1 border border-line rounded-md px-2 py-1 text-sm bg-transparent"
-                  value={giftAddress[v.address] ?? ""}
-                  onChange={(e) =>
-                    setGiftAddress((prev) => ({ ...prev, [v.address]: e.target.value }))
-                  }
-                />
-                <button
-                  className="border border-line rounded-md px-3 text-sm disabled:opacity-50"
-                  disabled={busy === v.address}
-                  onClick={() => handleGift(v, giftAddress[v.address] ?? "")}
-                >
-                  {busy === v.address ? "Sending…" : "Gift"}
-                </button>
-              </div>
-            </>
-          )}
-
-          {v.presented && (
-            <button
-              className="border border-line rounded-md py-1.5 text-sm disabled:opacity-50"
-              disabled={busy === v.address}
-              onClick={() => handleCancel(v)}
-            >
-              {busy === v.address ? "Cancelling…" : "Cancel"}
-            </button>
-          )}
-        </div>
+          <div className="flex flex-wrap gap-2 border-t border-line bg-paper-2/50 px-4 py-3">
+            <OnChainId label="NFT mint" address={v.mint.toBase58()} />
+            <OnChainId label="Token account" address={v.holderToken.toBase58()} />
+            <OnChainId label="Voucher" address={v.address} />
+          </div>
+        </article>
       ))}
-      {error && <p className="text-stamp-red text-sm">{error}</p>}
-    </div>
+      {error && <p role="alert" className="text-sm text-stamp-red">{error}</p>}
+    </section>
   );
 }

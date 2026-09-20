@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import type { Keypair } from "@solana/web3.js";
+import { OnChainId } from "@/components/ui/OnChainId";
+import { StoreIcon } from "@/components/ui/icons";
 
 type DirectoryEntry = {
   address: string;
@@ -64,7 +66,7 @@ export function BusinessDirectory({ keypair }: { keypair: Keypair }) {
   }, [program, keypair]);
 
   if (businesses === null) {
-    return <p className="text-sm text-charcoal/60 font-mono">Loading businesses…</p>;
+    return <p className="font-mono text-sm text-muted">Loading businesses…</p>;
   }
 
   if (businesses.length === 0) {
@@ -72,19 +74,20 @@ export function BusinessDirectory({ keypair }: { keypair: Keypair }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 w-full max-w-sm">
-      <p className="font-mono text-xs uppercase tracking-wider text-charcoal/60">
-        Participating businesses
-      </p>
+    <section aria-labelledby="businesses" className="flex flex-col gap-3">
+      <h2 id="businesses" className="eyebrow">Participating businesses</h2>
       {businesses.map((b) => (
-        <div key={b.address} className="border border-line rounded-lg p-3 text-sm bg-white/60">
-          <p className="font-mono font-medium text-ink">{b.name}</p>
-          <p className="text-xs text-charcoal/60">{b.category}</p>
-          <p className="text-xs text-charcoal/60">
-            {b.rewardLabel} — {b.stampsRequired} stamps
+        <article key={b.address} className="surface p-4">
+          <div className="flex items-center gap-2 text-ink">
+            <StoreIcon size={18} />
+            <h3 className="font-mono font-semibold">{b.name}</h3>
+          </div>
+          <p className="mt-1 text-sm text-muted">
+            {b.category} · {b.rewardLabel} after {b.stampsRequired} stamp{b.stampsRequired === 1 ? "" : "s"}
           </p>
-        </div>
+          <div className="mt-3"><OnChainId label="Business" address={b.address} /></div>
+        </article>
       ))}
-    </div>
+    </section>
   );
 }

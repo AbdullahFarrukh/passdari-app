@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { WalletContextProvider } from "@/components/WalletContextProvider";
+import { TopBar } from "@/components/TopBar";
+import { Footer } from "@/components/Footer";
 
 const plexSans = IBM_Plex_Sans({
   variable: "--font-plex-sans",
@@ -16,8 +18,8 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Loyalty",
-  description: "A digital stamp card for local businesses",
+  title: "Passdari",
+  description: "Loyalty stamp cards and rewards on Solana, owned by the customer",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -26,8 +28,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body>
-        <WalletContextProvider>{children}</WalletContextProvider>
+      <body className="flex min-h-screen flex-col">
+        <TopBar />
+        <main className="flex-1">
+          <WalletContextProvider>{children}</WalletContextProvider>
+        </main>
+        <Footer />
       </body>
     </html>
   );

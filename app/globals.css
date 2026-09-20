@@ -1,21 +1,38 @@
 @import "tailwindcss";
 
+/* Passdari: "the stamped ledger". Kraft paper, ink blue and stamp red, as before, with the
+   on-chain side of the app made visible (addresses, network, wallet). All text colours below
+   were checked for at least 4.5:1 contrast against the paper background. */
 :root {
   --paper: #EDE6D6;
-  --ink: #2E3F6E;
-  --stamp-red: #B23A2E;
-  --charcoal: #2A2724;
-  --quiet-green: #4C7A5E;
+  --paper-2: #E3DAC4;
+  --surface: #F8F4EA;
   --line: #C9BFA8;
+  --line-strong: #A89D83;
+  --ink: #2E3F6E;
+  --ink-deep: #1F2B4D;
+  --stamp-red: #B23A2E;
+  --stamp-red-deep: #8F2C22;
+  --charcoal: #2A2724;
+  --muted: #5C564D;
+  --verified: #3B6248;
+  --quiet-green: #4C7A5E;
 }
 
 @theme inline {
   --color-paper: var(--paper);
-  --color-ink: var(--ink);
-  --color-stamp-red: var(--stamp-red);
-  --color-charcoal: var(--charcoal);
-  --color-quiet-green: var(--quiet-green);
+  --color-paper-2: var(--paper-2);
+  --color-surface: var(--surface);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-deep: var(--ink-deep);
+  --color-stamp-red: var(--stamp-red);
+  --color-stamp-red-deep: var(--stamp-red-deep);
+  --color-charcoal: var(--charcoal);
+  --color-muted: var(--muted);
+  --color-verified: var(--verified);
+  --color-quiet-green: var(--quiet-green);
   --font-sans: var(--font-plex-sans);
   --font-mono: var(--font-plex-mono);
 }
@@ -26,20 +43,51 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-.wallet-adapter-button {
-  background-color: var(--ink) !important;
-  color: var(--paper) !important;
-  font-family: var(--font-plex-sans), sans-serif !important;
-  border-radius: 0.375rem !important;
-  font-size: 0.875rem !important;
-  height: auto !important;
-  padding: 0.5rem 1rem !important;
+/* Small mono label used above data: "WALLET", "CARD ACCOUNT", ... */
+.eyebrow {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--muted);
 }
 
-.wallet-adapter-button:not([disabled]):hover {
-  background-color: var(--charcoal) !important;
+/* A raised piece of paper: cards, panels, tickets. */
+.surface {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
 }
 
-.wallet-adapter-button-start-icon {
-  display: none !important;
+/* Form fields: 44px tall, a visible focus ring, placeholder text that is still readable. */
+.field {
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9375rem;
+  color: var(--charcoal);
+}
+.field::placeholder { color: var(--muted); opacity: 0.75; }
+.field:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
+
+/* Every interactive thing gets a visible keyboard focus ring. */
+a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 0.375rem;
+}
+
+/* Faint ruled lines, like ledger paper. Used behind the hero only. */
+.ledger-lines {
+  background-image: linear-gradient(to bottom, transparent 31px, rgba(46, 63, 110, 0.07) 32px);
+  background-size: 100% 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }

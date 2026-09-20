@@ -5,7 +5,7 @@ import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { signUp, signIn, recoverAccount } from "@/lib/customerAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
-import { signDisplayName } from "@/lib/nameAuth";
+import { saveDisplayName } from "@/lib/displayName";
 import { MyCards } from "@/components/MyCards";
 import { MyVouchers } from "@/components/MyVouchers";
 import { BusinessDirectory } from "@/components/BusinessDirectory";
@@ -58,16 +58,8 @@ export default function CustomerPage() {
       setKeypair(kp);
       setNewMnemonic(mnemonic);
 
-      fetch("/api/customer-name", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Signed with the new wallet's own key, so only its owner can set its name.
-        body: JSON.stringify(signDisplayName(kp, username)),
-      })
-        .then((res) => {
-          if (!res.ok) console.error("Could not save display name:", res.status);
-        })
-        .catch((err) => console.error("Could not save display name:", err));
+      // Signed with the new wallet's own key, so only its owner can set its name.
+      saveDisplayName(kp, username);
     } catch (err) {
       console.error("Sign up failed:", err);
       setAuthError(err instanceof Error ? err.message : "Something went wrong");
@@ -80,6 +72,9 @@ export default function CustomerPage() {
     try {
       const kp = await signIn(username, password);
       setKeypair(kp);
+      // Customers who signed up before names could be saved get one now. This
+      // only fills in a missing name, it never replaces one that is there.
+      saveDisplayName(kp, username, { onlyIfMissing: true });
     } catch (err) {
       console.error("Sign in failed:", err);
       setAuthError("Incorrect username or password.");
@@ -91,6 +86,7 @@ export default function CustomerPage() {
     try {
       const kp = await recoverAccount(recoveryUsername, recoveryPhrase, recoveryPassword);
       setKeypair(kp);
+      saveDisplayName(kp, recoveryUsername, { onlyIfMissing: true });
       setUsername(recoveryUsername);
       setShowRecovery(false);
       setRecoveryUsername("");

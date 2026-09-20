@@ -31,7 +31,7 @@ since only a merchant's own choice to register creates a `Business` at all.
 - `bip39` + `ed25519-hd-key` for both merchant and customer key generation
 - `react-zxing` for the camera QR scanner, with manual code entry as a mandatory fallback
 - `@google/genai` (Gemini) for the AI copilot, with three fixed, clickable questions and a real, honest fallback (plain-templated real data, clearly labeled) if the live AI call fails
-- `node:sqlite` (built into Node — no separate install) for one small table: customer display names
+- Upstash Redis (`@upstash/redis`) for one small list: customer display names
 - IBM Plex Sans / IBM Plex Mono, custom color palette (kraft paper background, ink-blue and stamp-red accents) — see `app/globals.css`
 
 ## Running locally
@@ -45,6 +45,8 @@ npm install
 Create `.env.local`:
 
 GEMINI_API_KEY=your-key-here
+
+Optional, for customer display names: `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (or the `KV_REST_API_URL` / `KV_REST_API_TOKEN` pair that Vercel's Upstash integration sets). Without them, `npm run dev` still works: names are kept in memory and disappear when the dev server restarts. On a production build, saving a name fails with a clear error instead.
 
 
 (Get a free key at [aistudio.google.com](https://aistudio.google.com) — no billing required for the free tier.)
@@ -63,9 +65,11 @@ Homepage (choose customer or merchant): `localhost:3000` · Merchant: `localhost
 
 **Customer:** sign up / sign in / account recovery via backup phrase, "My cards" with a real stamp-row visual (not a generic progress bar), profile stats, a business directory of the customer's own participating businesses (shown once they've claimed their first stamp), camera QR scanning with manual entry fallback, minting, presenting, cancelling, and gifting vouchers.
 
-## Architecture note: the customer-names database
+## Architecture note: the customer-names store
 
-The one piece of this app that isn't purely on-chain: a small SQLite database mapping a wallet address to a chosen display name, so the merchant's "top loyal customers" list can show names instead of raw addresses. It stores exactly that — nothing else. Every fact that actually matters (stamps, vouchers, ownership, redemptions) lives entirely on-chain and is unaffected if this database were deleted. It decorates; it never decides.
+The one piece of this app that isn't purely on-chain: a small list in Upstash Redis mapping a wallet address to a chosen display name, so the merchant's "top loyal customers" list and the copilot can show names instead of raw addresses. It stores exactly that — nothing else. Every fact that actually matters (stamps, vouchers, ownership, redemptions) lives entirely on-chain and is unaffected if this list were deleted. It decorates; it never decides.
+
+It used to be a SQLite file, which works on a laptop but not on Vercel (serverless functions have no disk that lasts), so names never saved on the live site. Test names, preview deployments and the live site each get their own list inside the same store (`passdari:customer_names:<environment>`), so trying things out never puts a fake name on the live dashboard.
 
 ## Known limitations
 

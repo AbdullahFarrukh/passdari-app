@@ -12,6 +12,7 @@
     "@anchor-lang/core": "1.1.2",
     "@google/genai": "^2.19.0",
     "@solana/web3.js": "^1.98.4",
+    "@upstash/redis": "^1.38.4",
     "bip39": "^3.1.0",
     "bn.js": "^5.2.5",
     "ed25519-hd-key": "^2.0.0",

@@ -55,7 +55,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  setCustomerName(address, trimmedName);
+  const saved = await setCustomerName(address, trimmedName);
+  if (!saved) {
+    return NextResponse.json({ error: "Display names are temporarily unavailable." }, { status: 503 });
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -71,6 +74,6 @@ export async function GET(request: NextRequest) {
     .filter(isValidSolanaAddress)
     .slice(0, MAX_ADDRESSES_PER_LOOKUP);
 
-  const names = getCustomerNames(addresses);
+  const names = await getCustomerNames(addresses);
   return NextResponse.json({ names });
 }

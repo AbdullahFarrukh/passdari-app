@@ -62,6 +62,14 @@ function noStoreConfigured(): void {
   }
 }
 
+// The library's error message repeats the whole command it was running, which
+// here contains a customer's wallet address and display name. Server logs
+// shouldn't hold that, so log only the reason it failed.
+function reasonFor(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  return message.split(", command was:")[0];
+}
+
 // Returns whether the name was really saved, so the caller can say so.
 export async function setCustomerName(address: string, name: string): Promise<boolean> {
   const redis = getClient();
@@ -76,7 +84,7 @@ export async function setCustomerName(address: string, name: string): Promise<bo
     await redis.hset(namesKey(), { [address]: name });
     return true;
   } catch (err) {
-    console.error("Could not save the customer name:", err);
+    console.error("Could not save the customer name:", reasonFor(err));
     return false;
   }
 }
@@ -113,7 +121,7 @@ export async function getCustomerNames(addresses: string[]): Promise<Record<stri
     return found;
   } catch (err) {
     // A missing name just shows the address instead, so don't fail the whole page.
-    console.error("Could not load customer names:", err);
+    console.error("Could not load customer names:", reasonFor(err));
     return {};
   }
 }

@@ -132,7 +132,7 @@ The app and the program on devnet have to stay in step: a program upgrade that c
 - The AI copilot's live-fallback templates only cover its three fixed questions; a freely-typed question that fails gets an honest "temporarily unavailable" message instead.
 - Purchase-band distribution (small/medium/large) isn't available to the AI copilot — the exact band is discarded once a receipt is claimed, by design, for customer privacy.
 - A customer can set their own display name to any text, and names are passed to the AI copilot. The worst this can do is change the wording of an answer only that merchant sees.
-- The voucher and card NFTs' metadata links point at small pages (`/v/<mint>`, `/c/<mint>`) with a description but no image yet.
+- The voucher and card NFTs' metadata links point at small pages (`/v/<mint>`, `/c/<mint>`) that return a description and a picture (`public/nft/passdari-voucher.png`, `passdari-card.png`). It is one picture for all vouchers and one for all cards, with no business name on it, and this app serves it, so it depends on the app staying up. Ownership itself stays on-chain.
 - Lists refresh by checking every few seconds (the presented-voucher lists), not by subscription.
 
 ## The relayer's operational story

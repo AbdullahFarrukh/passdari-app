@@ -6,10 +6,15 @@ import { signUp, signIn, recoverAccount } from "@/lib/merchantAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { RegisterBusinessForm } from "@/components/RegisterBusinessForm";
 import { MerchantDashboard } from "@/components/MerchantDashboard";
+import { TopCustomers } from "@/components/TopCustomers";
+import { Button } from "@/components/ui/Button";
 import { NewSaleForm } from "@/components/NewSaleForm";
 import { PresentedVouchers } from "@/components/PresentedVouchers";
 import { MerchantCopilot } from "@/components/MerchantCopilot";
 import { ReclaimExpiredReceipts } from "@/components/ReclaimExpiredReceipts";
+import { AuthPanel } from "@/components/AuthPanel";
+import { AccountBar } from "@/components/AccountBar";
+import { MnemonicNotice } from "@/components/MnemonicNotice";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
@@ -30,9 +35,11 @@ export default function MerchantPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const program = useCustomerProgram(keypair);
 
-  const checkForBusiness = () => {
+  // `quiet` refreshes the numbers in place. Without it the whole dashboard is replaced by "Checking your account…"
+  // while it reloads, which also throws away anything on screen (like a receipt's QR code that is still being scanned).
+  const checkForBusiness = (quiet = false) => {
     if (!program || !keypair) return;
-    setMyBusiness("checking");
+    if (!quiet) setMyBusiness("checking");
 
     const [businessPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("business"), keypair.publicKey.toBuffer()],
@@ -42,7 +49,9 @@ export default function MerchantPage() {
     program.account.business
       .fetch(businessPda)
       .then((account) => setMyBusiness(account))
-      .catch(() => setMyBusiness(null));
+      .catch(() => {
+        if (!quiet) setMyBusiness(null);
+      });
   };
 
   useEffect(checkForBusiness, [program, keypair]);
@@ -126,98 +135,27 @@ export default function MerchantPage() {
   }
 
   return (
-    <div className="min-h-screen bg-paper text-charcoal flex flex-col items-center py-10 px-8 gap-6">
+    <div className="text-charcoal flex flex-col items-center py-8 px-4 gap-6">
       {!keypair && (
-        <div className="flex flex-col items-center gap-2 w-full max-w-sm mt-16">
-                    <p className="font-mono text-lg text-ink mb-2">Passdari — Merchant</p>
-          <input
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
-          />
-          <input
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
-          />
-          <div className="flex gap-2 w-full">
-            <button
-              className="flex-1 bg-ink text-paper rounded-md py-2 text-sm font-medium"
-              onClick={handleSignUp}
-            >
-              Sign up
-            </button>
-            <button
-              className="flex-1 border border-ink text-ink rounded-md py-2 text-sm font-medium"
-              onClick={handleSignIn}
-            >
-              Sign in
-            </button>
-          </div>
-          <button
-            className="text-xs text-charcoal/60 underline"
-            onClick={() => setShowRecovery((s) => !s)}
-          >
-            Forgot password?
-          </button>
-          {authError && <p className="text-stamp-red text-sm">{authError}</p>}
-
-          {showRecovery && (
-            <div className="flex flex-col items-center gap-2 border-t border-line pt-4 w-full mt-2">
-              <p className="text-sm font-semibold text-ink">Recover your account</p>
-              <input
-                placeholder="Username to recover"
-                value={recoveryUsername}
-                onChange={(e) => setRecoveryUsername(e.target.value)}
-                className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
-              />
-              <textarea
-                placeholder="Your 12-word phrase"
-                value={recoveryPhrase}
-                onChange={(e) => setRecoveryPhrase(e.target.value)}
-                className="w-full border border-line rounded-md px-3 py-2 bg-white/60 font-mono text-sm"
-                rows={2}
-              />
-              <input
-                placeholder="New password"
-                type="password"
-                value={recoveryPassword}
-                onChange={(e) => setRecoveryPassword(e.target.value)}
-                className="w-full border border-line rounded-md px-3 py-2 bg-white/60"
-              />
-              <button
-                className="w-full bg-ink text-paper rounded-md py-2 text-sm font-medium"
-                onClick={handleRecover}
-              >
-                Recover account
-              </button>
-              {recoveryError && <p className="text-stamp-red text-sm">{recoveryError}</p>}
-            </div>
-          )}
-        </div>
+        <AuthPanel
+          role="merchant"
+          username={username} onUsername={setUsername}
+          password={password} onPassword={setPassword}
+          onSignUp={handleSignUp} onSignIn={handleSignIn}
+          error={authError}
+          showRecovery={showRecovery} onToggleRecovery={() => setShowRecovery((s) => !s)}
+          recoveryUsername={recoveryUsername} onRecoveryUsername={setRecoveryUsername}
+          recoveryPhrase={recoveryPhrase} onRecoveryPhrase={setRecoveryPhrase}
+          recoveryPassword={recoveryPassword} onRecoveryPassword={setRecoveryPassword}
+          onRecover={handleRecover} recoveryError={recoveryError}
+        />
       )}
 
       {keypair && (
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-sm font-medium">Signed in as {username}</p>
-          <p className="text-xs text-charcoal/50 font-mono">{keypair.publicKey.toBase58()}</p>
-          <button className="text-xs text-charcoal/60 underline" onClick={handleSignOut}>
-            Sign out
-          </button>
-        </div>
+        <AccountBar username={username} address={keypair.publicKey.toBase58()} onSignOut={handleSignOut} />
       )}
 
-      {newMnemonic && (
-        <div className="border-2 border-stamp-red rounded-lg p-3 max-w-sm text-sm bg-white/60">
-          <p className="font-semibold text-stamp-red mb-2">
-            Write these 12 words down now. This is the only time they will ever be shown.
-          </p>
-          <p className="font-mono break-words">{newMnemonic}</p>
-        </div>
-      )}
+      {newMnemonic && <MnemonicNotice phrase={newMnemonic} onDismiss={() => setNewMnemonic(null)} />}
 
       {keypair && myBusiness === "checking" && (
         <p className="text-sm text-charcoal/60 font-mono">Checking your account…</p>
@@ -234,32 +172,48 @@ export default function MerchantPage() {
         )}
 
       {keypair && myBusiness && myBusiness !== "checking" && (
-        <>
+        <div className="flex w-full max-w-6xl flex-col gap-6">
           <MerchantDashboard program={program} business={myBusiness} keypair={keypair} />
 
-          <NewSaleForm
-            keypair={keypair}
-            minPurchaseMinor={Number(myBusiness.minPurchaseAmount.toString())}
-            onDone={checkForBusiness}
-          />
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+            <div className="flex flex-col gap-6">
+              <NewSaleForm
+                keypair={keypair}
+                minPurchaseMinor={Number(myBusiness.minPurchaseAmount.toString())}
+                ttlSeconds={Number(myBusiness.receiptTtlSeconds)}
+                onDone={checkForBusiness}
+              />
+              <PresentedVouchers
+                keypair={keypair}
+                refreshKey={refreshKey}
+                onChange={() => {
+                  setRefreshKey((k) => k + 1);
+                  // The presented list checks every few seconds, so the headline numbers stay live too.
+                  checkForBusiness(true);
+                }}
+                onRedeem={() => {
+                  setRefreshKey((k) => k + 1);
+                  checkForBusiness(true);
+                }}
+              />
+            </div>
+
+            <div className="flex flex-col gap-6">
+              <TopCustomers program={program} keypair={keypair} />
+              <ReclaimExpiredReceipts keypair={keypair} />
+              <details className="text-sm text-muted">
+                <summary className="cursor-pointer select-none py-1 hover:text-ink">Demo tools</summary>
+                <div className="mt-2">
+                  <Button variant="outline" size="sm" onClick={handleLowerThreshold}>
+                    Lower reward threshold to 1
+                  </Button>
+                </div>
+              </details>
+            </div>
+          </div>
 
           <MerchantCopilot keypair={keypair} />
-                    <ReclaimExpiredReceipts keypair={keypair} />
-
-          <PresentedVouchers
-            keypair={keypair}
-            refreshKey={refreshKey}
-            onChange={() => setRefreshKey((k) => k + 1)}
-            onRedeem={() => {
-              setRefreshKey((k) => k + 1);
-              checkForBusiness();
-            }}
-          />
-
-          <button onClick={handleLowerThreshold} className="text-xs text-charcoal/40 underline">
-            Lower reward threshold to 1 (testing only)
-          </button>
-        </>
+        </div>
       )}
     </div>
   );

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Keypair } from "@solana/web3.js";
 import { signCopilotRequest } from "@/lib/copilotAuth";
+import { Button } from "@/components/ui/Button";
+import { ChatIcon, CloseIcon, LockIcon } from "@/components/ui/icons";
 
 type Message = { role: "user" | "assistant"; text: string; usedFallback?: boolean };
 
@@ -55,78 +57,61 @@ export function MerchantCopilot({ keypair }: { keypair: Keypair }) {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open && (
-        <div className="w-80 flex flex-col gap-3 border border-line rounded-lg p-4 bg-white shadow-lg mb-3">
-          <div className="flex justify-between items-center">
-            <p className="font-mono text-xs uppercase tracking-wider text-charcoal/60">
-              Ask about your business
-            </p>
-            <button onClick={() => setOpen(false)} className="text-charcoal/50 text-sm">
-              ✕
+        <section aria-label="Business copilot" className="surface flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-3 p-4 shadow-lg">
+          <div className="flex items-center justify-between">
+            <h2 className="eyebrow">Ask about your business</h2>
+            <button type="button" onClick={() => setOpen(false)} aria-label="Close copilot"
+              className="inline-flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper-2 hover:text-ink">
+              <CloseIcon />
             </button>
           </div>
 
-          <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+          <div className="flex max-h-72 flex-col gap-2 overflow-y-auto">
             {messages.length === 0 && (
               <div className="flex flex-col gap-1.5">
-                <p className="text-sm text-charcoal/50 mb-1">Try one of these:</p>
+                <p className="mb-1 text-sm text-muted">Try one of these:</p>
                 {SUGGESTED_QUESTIONS.map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => ask(q)}
-                    className="text-left text-sm border border-line rounded-md px-2 py-1.5 hover:bg-paper"
-                  >
+                  <button key={q} type="button" onClick={() => ask(q)}
+                    className="min-h-10 rounded-lg border border-line bg-paper px-3 py-2 text-left text-sm hover:border-ink hover:bg-paper-2">
                     {q}
                   </button>
                 ))}
               </div>
             )}
             {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`text-sm p-2 rounded-md ${
-                  m.role === "user" ? "bg-paper self-end text-right" : "bg-ink/5 text-ink"
-                }`}
-              >
+              <div key={i} className={`rounded-lg p-2.5 text-sm ${m.role === "user" ? "self-end bg-paper-2 text-right" : "bg-ink/5 text-ink"}`}>
                 {m.text}
                 {m.usedFallback && (
-                  <p className="text-xs text-stamp-red mt-1">
+                  <p className="mt-1 text-xs text-stamp-red">
                     (Live AI was unavailable — this is a plain-data answer, not an AI response.)
                   </p>
                 )}
               </div>
             ))}
-            {loading && <p className="text-sm text-charcoal/50 font-mono">Thinking…</p>}
+            {loading && <p className="font-mono text-sm text-muted">Thinking…</p>}
           </div>
 
           <form onSubmit={handleAsk} className="flex gap-2">
-            <input
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Ask a question"
-              className="flex-1 border border-line rounded-md px-3 py-2 bg-white text-sm"
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-ink text-paper rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
-            >
-              Ask
-            </button>
+            <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Ask a question"
+              aria-label="Your question" className="field min-w-0 flex-1 text-sm" />
+            <Button type="submit" disabled={loading}>Ask</Button>
           </form>
 
-          {error && <p className="text-stamp-red text-sm">{error}</p>}
-        </div>
+          {error && <p role="alert" className="text-sm text-stamp-red">{error}</p>}
+
+          <p className="flex items-start gap-1.5 border-t border-line pt-2 text-xs text-muted">
+            <LockIcon size={14} className="mt-0.5 shrink-0" />
+            Each question is signed with your merchant wallet, so only you can ask about your customers.
+          </p>
+        </section>
       )}
 
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-14 h-14 rounded-full bg-ink text-paper shadow-lg flex items-center justify-center"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-        </svg>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+        aria-label={open ? "Close copilot" : "Open copilot"}
+        className="flex size-14 items-center justify-center rounded-full bg-ink text-paper shadow-lg hover:bg-ink-deep">
+        <ChatIcon size={24} />
       </button>
     </div>
   );

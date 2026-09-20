@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
+import { Button } from "@/components/ui/Button";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 const CLOCK_SYSVAR = new PublicKey("SysvarC1ock11111111111111111111111111111111");
@@ -123,18 +124,15 @@ export function ReclaimExpiredReceipts({ keypair }: { keypair: Keypair }) {
   if (!expiredCount) return null;
 
   return (
-    <div className="w-full max-w-sm flex flex-col gap-2 border border-line rounded-lg p-3 bg-white/60">
-      <p className="text-sm text-charcoal/70">
+    <section aria-labelledby="reclaim" className="surface p-4 sm:p-5">
+      <h2 id="reclaim" className="eyebrow">Housekeeping</h2>
+      <p className="mt-2 text-sm text-muted">
         {expiredCount} expired receipt{expiredCount === 1 ? "" : "s"} still holding rent.
       </p>
-      <button
-        onClick={handleReclaim}
-        disabled={working}
-        className="border border-ink text-ink rounded-md py-1.5 text-sm disabled:opacity-50"
-      >
+      <Button variant="outline" size="sm" className="mt-3" onClick={handleReclaim} disabled={working}>
         {working ? "Reclaiming…" : "Clean up expired receipts"}
-      </button>
-      {status && <p className="text-xs text-charcoal/60">{status}</p>}
-    </div>
+      </Button>
+      {status && <p className="mt-2 text-xs text-muted">{status}</p>}
+    </section>
   );
 }

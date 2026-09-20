@@ -5,6 +5,8 @@ import { Keypair, PublicKey } from "@solana/web3.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
 import { TOKEN_2022_PROGRAM_ID, findHolders } from "@/lib/vouchers";
+import { Button } from "@/components/ui/Button";
+import { OnChainId } from "@/components/ui/OnChainId";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
@@ -131,32 +133,39 @@ export function PresentedVouchers({
     }
   }
 
-  if (!vouchers || vouchers.length === 0) return null;
+  const count = vouchers?.length ?? 0;
 
   return (
-    <div className="flex flex-col gap-2 w-full max-w-sm">
-      <p className="font-mono text-xs uppercase tracking-wider text-charcoal/60">
-        Presented vouchers
-      </p>
-      <div className="border border-line rounded-lg divide-y divide-line bg-white/60">
-        {vouchers.map((v) => (
-          <div key={v.address} className="flex justify-between items-center px-3 py-2">
-            <div>
-              <p className="font-mono text-sm text-ink">Voucher #{v.voucherId}</p>
-              <p className="text-xs text-charcoal/50 font-mono">
-                {v.holder.slice(0, 4)}…{v.holder.slice(-4)}
-              </p>
-            </div>
-            <button
-              disabled={busy === v.address}
-              onClick={() => handleRedeem(v)}
-              className="bg-stamp-red text-paper rounded-md px-4 py-1.5 text-sm font-medium disabled:opacity-50"
-            >
-              {busy === v.address ? "Redeeming…" : "Redeem"}
-            </button>
-          </div>
-        ))}
+    <section aria-labelledby="presented" className="surface p-4 sm:p-5">
+      <div className="flex items-center justify-between">
+        <h2 id="presented" className="eyebrow">Presented vouchers</h2>
+        {count > 0 && <span className="rounded-full bg-stamp-red px-2 py-0.5 font-mono text-xs text-paper">{count}</span>}
       </div>
-    </div>
+
+      {count === 0 ? (
+        <p className="mt-3 text-sm text-muted">Nothing presented right now. When a customer presents a voucher, it appears here by itself.</p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-3">
+          {vouchers!.map((v) => (
+            <li key={v.address} className="rounded-lg border border-line bg-paper p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-mono font-semibold text-ink">Voucher #{v.voucherId}</p>
+                  <p className="text-xs text-muted">Redeeming burns the NFT.</p>
+                </div>
+                <Button variant="danger" size="sm" disabled={busy === v.address} onClick={() => handleRedeem(v)}>
+                  {busy === v.address ? "Redeeming…" : "Redeem"}
+                </Button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <OnChainId label="Holder" address={v.holder} />
+                <OnChainId label="NFT mint" address={v.mint.toBase58()} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <p role="alert" className="mt-3 text-sm text-stamp-red">{error}</p>}
+    </section>
   );
 }

@@ -5,6 +5,9 @@ import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { keccak256 } from "js-sha3";
 import QRCode from "qrcode";
 import { useCustomerProgram } from "@/lib/customerProgram";
+import { Button } from "@/components/ui/Button";
+import { OnChainId } from "@/components/ui/OnChainId";
+import { CheckIcon } from "@/components/ui/icons";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
@@ -18,10 +21,12 @@ function computeAmountBand(amountMinor: number, minPurchase: number): number {
 export function NewSaleForm({
   keypair,
   minPurchaseMinor,
+  ttlSeconds,
   onDone,
 }: {
   keypair: Keypair;
   minPurchaseMinor: number;
+  ttlSeconds: number;
   onDone: () => void;
 }) {
   const program = useCustomerProgram(keypair);
@@ -30,6 +35,7 @@ export function NewSaleForm({
   const [error, setError] = useState<string | null>(null);
   const [secretHex, setSecretHex] = useState<string | null>(null);
   const [qrImage, setQrImage] = useState<string | null>(null);
+  const [receiptAddress, setReceiptAddress] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -48,6 +54,7 @@ export function NewSaleForm({
     setError(null);
     setSecretHex(null);
     setQrImage(null);
+    setReceiptAddress(null);
     setCopied(false);
 
     try {
@@ -100,6 +107,7 @@ export function NewSaleForm({
 
       setSecretHex(combinedCode);
       setQrImage(qrDataUrl);
+      setReceiptAddress(receiptPda.toBase58());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -113,54 +121,30 @@ export function NewSaleForm({
     setCopied(true);
   }
 
+  const validFor = ttlSeconds < 3600 ? `${Math.round(ttlSeconds / 60)} minutes` : `${Math.round(ttlSeconds / 3600)} hours`;
+
   return (
-    <div className="w-full max-w-sm flex flex-col gap-3">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <label className="text-sm text-charcoal/70">
-          Purchase amount (PKR)
-          <input
-            type="number"
-            min={1}
-            value={amountPkr}
-            onChange={(e) => setAmountPkr(Number(e.target.value))}
-            className="w-full border border-line rounded-md px-3 py-2 mt-1 bg-white/60 font-mono"
-          />
-        </label>
-        {error && <p className="text-stamp-red text-sm">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full bg-ink text-paper rounded-md py-2 text-sm font-medium disabled:opacity-50"
-        >
-          {submitting ? "Issuing…" : "New sale"}
-        </button>
+    <section aria-labelledby="new-sale" className="surface p-4 sm:p-5">
+      <h2 id="new-sale" className="eyebrow">New sale</h2>
+      <p className="mt-1 text-sm text-muted">Enter the purchase amount to create a one-time receipt the customer can scan.</p>
+      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="sale-amount" className="eyebrow">Purchase amount (PKR)</label>
+          <input id="sale-amount" type="number" min={1} className="field font-mono" value={amountPkr} onChange={(e) => setAmountPkr(Number(e.target.value))} />
+        </div>
+        {error && <p role="alert" className="text-sm text-stamp-red">{error}</p>}
+        <Button type="submit" disabled={submitting}>{submitting ? "Issuing…" : "New sale"}</Button>
       </form>
 
       {qrImage && secretHex && (
-        <div className="flex flex-col items-center gap-3 border border-line rounded-lg p-4 bg-white/60">
-          <p className="text-sm text-quiet-green flex items-center gap-1.5">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
-            Ready to scan
-          </p>
-          <img
-            src={qrImage}
-            alt="Receipt QR code"
-            width={180}
-            height={180}
-            className="rounded-md border border-line"
-          />
-          <p className="text-xs text-charcoal/50">Or share the code below</p>
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="border border-ink text-ink rounded-md px-4 py-1.5 text-sm"
-          >
-            {copied ? "Copied" : "Copy code"}
-          </button>
+        <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-line bg-paper p-4">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-verified"><CheckIcon size={16} /> Ready to scan</p>
+          <img src={qrImage} alt="Receipt QR code" width={180} height={180} className="rounded-md border border-line" />
+          <p className="text-center text-xs text-muted">Valid for {validFor}. It can be claimed once. Or share the code instead.</p>
+          <Button variant="outline" size="sm" onClick={handleCopy}>{copied ? "Copied" : "Copy code"}</Button>
+          {receiptAddress && <OnChainId label="Receipt" address={receiptAddress} />}
         </div>
       )}
-    </div>
+    </section>
   );
 }

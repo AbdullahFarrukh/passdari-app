@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Keypair } from "@solana/web3.js";
+import { signCopilotRequest } from "@/lib/copilotAuth";
 
 type Message = { role: "user" | "assistant"; text: string; usedFallback?: boolean };
 
@@ -10,7 +12,7 @@ const SUGGESTED_QUESTIONS = [
   "Is anything anomalous this week?",
 ];
 
-export function MerchantCopilot({ ownerAddress }: { ownerAddress: string }) {
+export function MerchantCopilot({ keypair }: { keypair: Keypair }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState("");
@@ -29,7 +31,9 @@ export function MerchantCopilot({ ownerAddress }: { ownerAddress: string }) {
       const res = await fetch("/api/copilot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ owner: ownerAddress, question: q }),
+        // Signed here in the browser with the merchant's own key, so the
+        // server can tell the request really comes from this business.
+        body: JSON.stringify(signCopilotRequest(keypair, q)),
       });
       const data = await res.json();
 

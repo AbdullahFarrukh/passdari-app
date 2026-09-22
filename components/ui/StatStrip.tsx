@@ -1,14 +1,21 @@
-// A few headline numbers, printed as receipt lines: a label, a dotted leader, then the value.
-export function StatStrip({ items }: { items: { label: string; value: number | string; alert?: boolean }[] }) {
+import { Receipt } from "./Receipt";
+import { ReceiptRow } from "./ReceiptRow";
+
+// A few headline numbers, printed as receipt lines under a centered "— TITLE —" label.
+export function StatStrip({ title, items }: { title: string; items: { label: string; value: number | string; alert?: boolean }[] }) {
   return (
-    <dl className="surface divide-y-2 divide-line overflow-hidden">
-      {items.map((item) => (
-        <div key={item.label} className="flex items-baseline gap-3 px-4 py-2.5">
-          <dt className="eyebrow shrink-0">{item.label}</dt>
-          <span aria-hidden="true" className="-translate-y-1 min-w-4 flex-1 border-b-2 border-dotted border-line-strong/40" />
-          <dd className={`shrink-0 font-mono text-lg font-bold tabular-nums ${item.alert ? "text-stamp-red" : "text-ink"}`}>{item.value}</dd>
-        </div>
-      ))}
-    </dl>
+    <Receipt className="px-5 pb-1.5 pt-3.5 sm:px-6">
+      <p className="text-center font-mono text-[10.5px] tracking-[.14em] text-muted">— {title} —</p>
+      <div className="mt-1.5 flex flex-col gap-0.5">
+        {items.map((item) => (
+          <ReceiptRow
+            key={item.label}
+            label={item.label}
+            value={item.value}
+            valueClassName={item.alert ? "text-stamp-red" : undefined}
+          />
+        ))}
+      </div>
+    </Receipt>
   );
 }

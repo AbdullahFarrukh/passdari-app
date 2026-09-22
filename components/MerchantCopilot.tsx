@@ -59,9 +59,9 @@ export function MerchantCopilot({ keypair }: { keypair: Keypair }) {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
       {open && (
-        <section aria-label="Business copilot" className="surface flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-3 p-4 shadow-lg">
+        <section aria-label="Business copilot" className="surface flex w-[min(22rem,calc(100vw-2rem))] flex-col gap-3 p-4">
           <div className="flex items-center justify-between">
-            <h2 className="eyebrow">Ask about your business</h2>
+            <h2 className="text-2xl leading-none text-ink">Ask about your business</h2>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close copilot"
               className="inline-flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper-2 hover:text-ink">
               <CloseIcon />
@@ -74,7 +74,7 @@ export function MerchantCopilot({ keypair }: { keypair: Keypair }) {
                 <p className="mb-1 text-sm text-muted">Try one of these:</p>
                 {SUGGESTED_QUESTIONS.map((q) => (
                   <button key={q} type="button" onClick={() => ask(q)}
-                    className="min-h-10 rounded-lg border border-line bg-paper px-3 py-2 text-left text-sm hover:border-ink hover:bg-paper-2">
+                    className="min-h-10 rounded-[10px] border-2 border-ink bg-paper px-3 py-2 text-left text-sm font-medium hover:bg-paper-2">
                     {q}
                   </button>
                 ))}
@@ -99,7 +99,7 @@ export function MerchantCopilot({ keypair }: { keypair: Keypair }) {
             <Button type="submit" disabled={loading}>Ask</Button>
           </form>
 
-          {error && <p role="alert" className="text-sm text-stamp-red">{error}</p>}
+          {error && <p role="alert" className="err">{error}</p>}
 
           <p className="flex items-start gap-1.5 border-t border-line pt-2 text-xs text-muted">
             <LockIcon size={14} className="mt-0.5 shrink-0" />

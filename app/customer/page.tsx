@@ -304,6 +304,7 @@ export default function CustomerPage() {
       {keypair && (
         <div className="w-full max-w-6xl">
           <StatStrip
+            title="TOTALS"
             items={[
               { label: "Total stamps", value: stats.totalStamps },
               { label: "Vouchers held", value: stats.voucherCount },

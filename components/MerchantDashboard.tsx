@@ -5,8 +5,8 @@ import type { Loyalty } from "@/lib/loyalty";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { PROGRAM_ID } from "@/lib/explorer";
 import { OnChainId } from "@/components/ui/OnChainId";
+import { Receipt } from "@/components/ui/Receipt";
 import { StatStrip } from "@/components/ui/StatStrip";
-import { StoreIcon } from "@/components/ui/icons";
 
 type Business = {
   name: string;
@@ -40,18 +40,16 @@ export function MerchantDashboard({
 
   return (
     <div className="flex w-full flex-col gap-4">
-      <div className="surface flex flex-wrap items-start justify-between gap-4 p-4 sm:p-5">
-        <div className="flex items-start gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-paper-2 text-ink"><StoreIcon size={22} /></span>
-          <div>
-            <h1 className="font-mono text-xl font-semibold text-ink sm:text-2xl">{business.name}</h1>
-            <p className="mt-0.5 text-sm text-muted">{business.category} · {business.rewardLabel}</p>
-          </div>
+      <Receipt className="flex flex-wrap items-start justify-between gap-4 px-5 py-4 sm:px-6">
+        <div>
+          <h1 className="text-4xl leading-none text-ink sm:text-5xl">{business.name}</h1>
+          <p className="mt-1 text-sm text-muted">{business.category} · {business.rewardLabel}</p>
         </div>
         <OnChainId label="Business account" address={businessPda.toBase58()} />
-      </div>
+      </Receipt>
 
       <StatStrip
+        title="TILL REPORT"
         items={[
           { label: "Cards registered", value: business.totalCards },
           { label: "Stamps issued", value: stampsIssued },

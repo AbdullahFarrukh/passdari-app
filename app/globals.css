@@ -67,13 +67,14 @@ h1, h2, h3, h4 {
   color: var(--muted);
 }
 
-/* A slip of receipt paper: cards, panels, tickets. Bold ink border, a hard printed-on-top shadow
-   instead of a soft blur — this is a flat poster, not a floating card. */
+/* A piece of paper, no border, a soft realistic shadow lifting it off the counter. This is the
+   canvas's own ".paper" primitive — for a floating panel (rounded corners). Most content cards use
+   the flat-cornered, torn-edge variant instead: see the Receipt component. */
 .surface {
   background: var(--surface);
-  border: 2px solid var(--line);
-  border-radius: 0.625rem;
-  box-shadow: 4px 4px 0 var(--line);
+  color: var(--ink);
+  border-radius: 0.875rem;
+  box-shadow: 0 10px 24px rgba(17, 17, 17, .16), 0 2px 4px rgba(17, 17, 17, .12);
 }
 
 /* Form fields: 52px tall, a visible focus ring, placeholder text that is still readable. Mono, like
@@ -91,6 +92,18 @@ h1, h2, h3, h4 {
 }
 .field::placeholder { color: var(--muted); opacity: 0.75; }
 .field:focus-visible { outline: 3px solid var(--stamp-blue); outline-offset: 2px; border-color: var(--ink); }
+
+/* An error or warning line: dashed red, never the receipt treatment (nothing was "printed" wrong). */
+.err {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--stamp-red);
+  border: 2px dashed var(--stamp-red);
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.375rem;
+  background: var(--surface);
+}
 
 /* Every interactive thing gets a visible keyboard focus ring, in stamp blue so it reads apart from the
    ink-black borders used everywhere else. */

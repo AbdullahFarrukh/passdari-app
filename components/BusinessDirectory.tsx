@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import type { Keypair } from "@solana/web3.js";
 import { OnChainId } from "@/components/ui/OnChainId";
-import { StoreIcon } from "@/components/ui/icons";
+import { Receipt } from "@/components/ui/Receipt";
 
 type DirectoryEntry = {
   address: string;
@@ -75,19 +75,18 @@ export function BusinessDirectory({ keypair }: { keypair: Keypair }) {
 
   return (
     <section aria-labelledby="businesses" className="flex flex-col gap-3">
-      <h2 id="businesses" className="eyebrow">Participating businesses</h2>
-      {businesses.map((b) => (
-        <article key={b.address} className="surface p-4">
-          <div className="flex items-center gap-2 text-ink">
-            <StoreIcon size={18} />
-            <h3 className="font-mono font-semibold">{b.name}</h3>
-          </div>
-          <p className="mt-1 text-sm text-muted">
-            {b.category} · {b.rewardLabel} after {b.stampsRequired} stamp{b.stampsRequired === 1 ? "" : "s"}
-          </p>
-          <div className="mt-3"><OnChainId label="Business" address={b.address} /></div>
-        </article>
-      ))}
+      <h2 id="businesses" className="text-2xl text-ink">Participating businesses</h2>
+      <div className="flex flex-col gap-5">
+        {businesses.map((b) => (
+          <Receipt key={b.address} className="px-5 pb-2 pt-3.5">
+            <h3 className="text-2xl text-ink">{b.name}</h3>
+            <p className="text-sm text-muted">
+              {b.category} · {b.rewardLabel} after {b.stampsRequired} stamp{b.stampsRequired === 1 ? "" : "s"}
+            </p>
+            <div className="mt-2.5"><OnChainId label="Business" address={b.address} /></div>
+          </Receipt>
+        ))}
+      </div>
     </section>
   );
 }

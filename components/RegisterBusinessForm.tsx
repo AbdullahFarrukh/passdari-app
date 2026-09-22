@@ -6,10 +6,15 @@ import BN from "bn.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
 import { Button } from "@/components/ui/Button";
-import { CubeIcon, KeyIcon, ShieldIcon } from "@/components/ui/icons";
-
+import { Receipt } from "@/components/ui/Receipt";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
+
+const WHAT_REGISTERING_DOES = [
+  { title: "A permanent address", text: "Your business account has a fixed address derived from your wallet. Customers' cards point to it." },
+  { title: "You stay in control", text: "Only your wallet can issue receipts and redeem vouchers. The rules you set here are stored on-chain." },
+  { title: "No fees to you", text: "Passdari's relayer pays the network fee and the account's rent." },
+];
 
 export function RegisterBusinessForm({ keypair, onDone }: { keypair: Keypair; onDone: () => void }) {
   const program = useCustomerProgram(keypair);
@@ -78,61 +83,58 @@ export function RegisterBusinessForm({ keypair, onDone }: { keypair: Keypair; on
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-10">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div>
-          <p className="eyebrow mb-2">Merchant</p>
-          <h1 className="text-balance text-2xl font-semibold text-ink">Register your business</h1>
-          <p className="mt-2 text-sm text-muted">Tell customers what they are collecting stamps for.</p>
-        </div>
+    <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
+      <Receipt className="px-6 pb-6 pt-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-[2.5rem] leading-[0.98] text-ink">Register your business</h1>
+            <p className="mt-1.5 text-sm text-muted">Tell customers what they are collecting stamps for.</p>
+          </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="biz-name" className="eyebrow">Business name</label>
-          <input id="biz-name" className="field" value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="biz-category" className="eyebrow">Category</label>
-          <input id="biz-category" className="field" placeholder="e.g. cafe" value={category} onChange={(e) => setCategory(e.target.value)} required />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="biz-reward" className="eyebrow">Reward label</label>
-          <input id="biz-reward" className="field" placeholder="e.g. Free coffee" value={rewardLabel} onChange={(e) => setRewardLabel(e.target.value)} required />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="biz-stamps" className="eyebrow">Stamps needed for a reward</label>
-          <input id="biz-stamps" type="number" min={1} className="field font-mono" value={stampsRequired} onChange={(e) => setStampsRequired(Number(e.target.value))} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="biz-min" className="eyebrow">Minimum purchase (PKR)</label>
-          <input id="biz-min" type="number" min={1} className="field font-mono" value={minPurchasePkr} onChange={(e) => setMinPurchasePkr(Number(e.target.value))} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="biz-ttl" className="eyebrow">Receipt valid for (minutes)</label>
-          <input id="biz-ttl" type="number" min={1} className="field font-mono" value={receiptMinutes} onChange={(e) => setReceiptMinutes(Number(e.target.value))} />
-        </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="biz-name" className="eyebrow">Business name</label>
+            <input id="biz-name" className="field" value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="biz-category" className="eyebrow">Category</label>
+            <input id="biz-category" className="field" placeholder="e.g. cafe" value={category} onChange={(e) => setCategory(e.target.value)} required />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="biz-reward" className="eyebrow">Reward label</label>
+            <input id="biz-reward" className="field" placeholder="e.g. Free coffee" value={rewardLabel} onChange={(e) => setRewardLabel(e.target.value)} required />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="biz-stamps" className="eyebrow">Stamps needed for a reward</label>
+            <input id="biz-stamps" type="number" min={1} className="field font-mono" value={stampsRequired} onChange={(e) => setStampsRequired(Number(e.target.value))} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="biz-min" className="eyebrow">Minimum purchase (PKR)</label>
+            <input id="biz-min" type="number" min={1} className="field font-mono" value={minPurchasePkr} onChange={(e) => setMinPurchasePkr(Number(e.target.value))} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="biz-ttl" className="eyebrow">Receipt valid for (minutes)</label>
+            <input id="biz-ttl" type="number" min={1} className="field font-mono" value={receiptMinutes} onChange={(e) => setReceiptMinutes(Number(e.target.value))} />
+          </div>
 
-        {error && <p role="alert" className="text-sm text-stamp-red">{error}</p>}
-        <Button type="submit" disabled={submitting}>{submitting ? "Registering…" : "Register business"}</Button>
-      </form>
+          {error && <p role="alert" className="err">{error}</p>}
+          <Button size="lg" type="submit" className="w-full" disabled={submitting}>
+            {submitting ? "Registering…" : "Register business"}
+          </Button>
+        </form>
+      </Receipt>
 
-      <aside className="surface h-fit p-5 sm:p-6" aria-labelledby="register-explainer">
-        <p className="eyebrow mb-2">What registering does</p>
-        <h2 id="register-explainer" className="text-lg font-semibold text-ink">Your business becomes an account on Solana</h2>
-        <ul className="mt-4 flex flex-col gap-4">
-          {[
-            { icon: CubeIcon, title: "A permanent address", text: "Your business account has a fixed address derived from your wallet. Customers' cards point to it." },
-            { icon: KeyIcon, title: "You stay in control", text: "Only your wallet can issue receipts and redeem vouchers. The rules you set here are stored on-chain." },
-            { icon: ShieldIcon, title: "No fees to you", text: "Passdari's relayer pays the network fee and the account's rent." },
-          ].map(({ icon: Icon, title, text }) => (
-            <li key={title} className="flex gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-paper-2 text-ink"><Icon size={18} /></span>
-              <div>
-                <p className="text-sm font-medium">{title}</p>
+      <aside aria-labelledby="register-explainer" className="h-fit">
+        <Receipt className="px-6 pb-4 pt-5">
+          <h2 id="register-explainer" className="text-balance text-[2rem] leading-[0.98] text-ink">Your business becomes an account on Solana</h2>
+          <ul className="mt-4 flex flex-col gap-3.5">
+            {WHAT_REGISTERING_DOES.map(({ title, text }, i) => (
+              <li key={title}>
+                <p className="font-mono text-xs font-bold uppercase text-ink">{i + 1}. {title}</p>
                 <p className="mt-0.5 text-sm text-muted">{text}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </Receipt>
       </aside>
     </div>
   );

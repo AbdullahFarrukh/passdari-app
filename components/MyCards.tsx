@@ -6,9 +6,7 @@ import BN from "bn.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
 import { Button } from "@/components/ui/Button";
-import { OnChainId } from "@/components/ui/OnChainId";
-import { CubeIcon } from "@/components/ui/icons";
-import { StampRow } from "@/components/ui/StampRow";
+import { LoyaltyCardReceipt } from "@/components/ui/LoyaltyCardReceipt";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
@@ -250,77 +248,55 @@ export function MyCards({
   if (cards.length === 0) {
     return (
       <section aria-labelledby="my-cards" className="flex w-full flex-col gap-3">
-        <h2 id="my-cards" className="eyebrow">My cards</h2>
-        <p className="surface p-5 text-sm text-muted">No cards yet. Scan a receipt from a business to start your first one.</p>
+        <h2 id="my-cards" className="text-2xl text-ink">My cards</h2>
+        <p className="rounded-xl border-2 border-dashed border-ink bg-surface p-5 text-sm text-muted">
+          No cards yet. Scan a receipt from a business to start your first one.
+        </p>
       </section>
     );
   }
 
   return (
     <section aria-labelledby="my-cards" className="flex w-full flex-col gap-3">
-      <h2 id="my-cards" className="eyebrow">My cards</h2>
-      {cards.map((card) => {
-        const isFull = card.stamps >= card.stampsRequired;
-        return (
-          <article key={card.cardAddress} className="surface overflow-hidden">
-            <div className="flex items-start justify-between gap-3 p-4 pb-3">
-              <div className="min-w-0">
-                <h3 className="truncate font-mono text-lg font-semibold text-ink">{card.name}</h3>
-                <p className="mt-0.5 text-sm text-muted">{card.rewardLabel}</p>
-              </div>
-              <p className="shrink-0 rounded-md bg-paper-2 px-2.5 py-1 font-mono text-sm text-muted">
-                <span className="font-semibold text-ink">{card.stamps}</span> / {card.stampsRequired}
-              </p>
+      <h2 id="my-cards" className="text-2xl text-ink">My cards</h2>
+      <div className="flex flex-col gap-6">
+        {cards.map((card) => {
+          const isFull = card.stamps >= card.stampsRequired;
+          return (
+            <div key={card.cardAddress} className="flex flex-col gap-3">
+              <LoyaltyCardReceipt
+                businessName={card.name}
+                rewardLabel={card.rewardLabel}
+                stamps={card.stamps}
+                stampsRequired={card.stampsRequired}
+                cardAddress={card.cardAddress}
+                cardNft={card.cardNft}
+              />
+
+              {isFull && (
+                <div className="flex flex-wrap items-center gap-3 rounded-xl bg-stamp-red/10 p-3">
+                  <p className="min-w-40 flex-1 text-sm font-medium text-stamp-red">Card complete. Your reward is ready.</p>
+                  <Button variant="danger" disabled={mintingFor === card.cardAddress} onClick={() => handleGetReward(card)}>
+                    {mintingFor === card.cardAddress ? "Getting your reward…" : `Get my ${card.rewardLabel}`}
+                  </Button>
+                </div>
+              )}
+
+              <dl className="grid grid-cols-2 rounded-xl border-2 border-line bg-surface text-sm">
+                <div className="px-4 py-2.5">
+                  <dt className="eyebrow">Stamps earned</dt>
+                  <dd className="font-mono font-semibold text-ink">{card.lifetimeStamps}</dd>
+                </div>
+                <div className="border-l-2 border-line px-4 py-2.5">
+                  <dt className="eyebrow">Rewards earned</dt>
+                  <dd className="font-mono font-semibold text-ink">{card.rewardsEarned}</dd>
+                </div>
+              </dl>
             </div>
-
-            <div className="px-4">
-              <StampRow total={card.stampsRequired} filled={card.stamps} />
-            </div>
-
-            {card.cardNft && (
-              <p className="mx-4 mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-                {card.cardNft.held ? (
-                  <>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-verified/10 px-2 py-0.5 font-medium text-verified">
-                      <CubeIcon size={12} /> Card NFT in your wallet
-                    </span>
-                    <span>Can&rsquo;t be sent to anyone else. Burned when you cash in.</span>
-                  </>
-                ) : (
-                  <span>No card NFT right now. Your next stamp brings one.</span>
-                )}
-              </p>
-            )}
-
-            {isFull && (
-              <div className="mx-4 mt-4 flex flex-wrap items-center gap-3 rounded-lg bg-stamp-red/10 p-3">
-                <p className="min-w-40 flex-1 text-sm font-medium text-stamp-red">Card complete. Your reward is ready.</p>
-                <Button variant="danger" disabled={mintingFor === card.cardAddress} onClick={() => handleGetReward(card)}>
-                  {mintingFor === card.cardAddress ? "Getting your reward…" : `Get my ${card.rewardLabel}`}
-                </Button>
-              </div>
-            )}
-
-            <dl className="mt-4 grid grid-cols-2 border-t border-line bg-paper-2/50 text-sm">
-              <div className="px-4 py-2.5">
-                <dt className="eyebrow">Stamps earned</dt>
-                <dd className="font-mono font-semibold text-ink">{card.lifetimeStamps}</dd>
-              </div>
-              <div className="border-l border-line px-4 py-2.5">
-                <dt className="eyebrow">Rewards earned</dt>
-                <dd className="font-mono font-semibold text-ink">{card.rewardsEarned}</dd>
-              </div>
-            </dl>
-
-            <div className="flex flex-wrap gap-2 border-t border-line px-4 py-3">
-              <OnChainId label="Card" address={card.cardAddress} />
-              {card.cardNft?.held && <OnChainId label="Card NFT" address={card.cardNft.mint} />}
-              <OnChainId label="Business" address={card.businessKey} />
-            </div>
-          </article>
-        );
-      })}
-      {mintError && <p role="alert" className="text-sm text-stamp-red">{mintError}</p>}
+          );
+        })}
+      </div>
+      {mintError && <p role="alert" className="err">{mintError}</p>}
     </section>
   );
 }

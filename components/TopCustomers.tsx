@@ -5,6 +5,7 @@ import type { Program } from "@anchor-lang/core";
 import type { Loyalty } from "@/lib/loyalty";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { OnChainId } from "@/components/ui/OnChainId";
+import { Receipt } from "@/components/ui/Receipt";
 
 type TopCustomer = {
   address: string;
@@ -67,18 +68,18 @@ export function TopCustomers({ program, keypair, refreshKey }: { program: Progra
   }, [program, keypair, refreshKey]);
 
   return (
-    <section aria-labelledby="top-customers" className="surface p-4 sm:p-5">
-      <h2 id="top-customers" className="eyebrow">Top loyal customers</h2>
+    <Receipt className="px-5 pb-4 pt-4 sm:px-6">
+      <h2 className="text-[2.125rem] leading-[0.98] text-ink">Top loyal customers</h2>
       {topCustomers && topCustomers.length > 0 ? (
-        <ol className="mt-3 divide-y divide-line">
+        <ol className="mt-2 flex flex-col">
           {topCustomers.map((c, i) => (
-            <li key={c.address} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+            <li key={c.address} className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-dotted border-line-strong/40 py-2.5 last:border-b-0">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="w-5 text-right font-mono text-sm text-muted">{i + 1}</span>
-                {c.name && <span className="truncate text-sm font-medium">{c.name}</span>}
+                {c.name && <span className="truncate text-sm font-bold text-ink">{c.name}</span>}
                 <OnChainId address={c.address} label={c.name ? undefined : "Wallet"} />
               </div>
-              <span className="font-mono text-sm font-semibold text-ink">
+              <span className="font-mono text-xs font-semibold uppercase text-ink">
                 {c.rewards} reward{c.rewards === 1 ? "" : "s"} earned
               </span>
             </li>
@@ -89,6 +90,6 @@ export function TopCustomers({ program, keypair, refreshKey }: { program: Progra
           {topCustomers === null ? "Loading…" : "No rewards earned yet. Customers who complete a card will appear here."}
         </p>
       )}
-    </section>
+    </Receipt>
   );
 }

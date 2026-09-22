@@ -13,7 +13,8 @@ import {
 } from "@/lib/vouchers";
 import { Button } from "@/components/ui/Button";
 import { OnChainId } from "@/components/ui/OnChainId";
-import { TicketIcon } from "@/components/ui/icons";
+import { Receipt } from "@/components/ui/Receipt";
+import { ReceiptRow } from "@/components/ui/ReceiptRow";
 
 type VoucherEntry = {
   address: string;
@@ -231,42 +232,53 @@ export function MyVouchers({
 
   return (
     <section aria-labelledby="my-vouchers" className="flex w-full flex-col gap-3">
-      <h2 id="my-vouchers" className="eyebrow">My vouchers</h2>
+      <h2 id="my-vouchers" className="text-2xl text-ink">My vouchers</h2>
 
-      {vouchers.length === 0 && <p className="surface p-5 text-sm text-muted">No vouchers yet.</p>}
+      {vouchers.length === 0 && (
+        <p className="rounded-xl border-2 border-dashed border-ink bg-surface p-5 text-sm text-muted">No vouchers yet.</p>
+      )}
 
-      {vouchers.map((v) => (
-        <article key={v.address} className="surface overflow-hidden">
-          <div className="flex items-stretch">
-            <div className="min-w-0 flex-1 p-4">
-              <p className="eyebrow flex items-center gap-1.5"><TicketIcon size={14} /> Token-2022 NFT</p>
-              <h3 className="mt-1.5 text-lg font-semibold text-ink">{v.rewardLabel}</h3>
-              <p className="mt-0.5 text-sm text-muted">
-                {v.businessName} · <span className="font-mono">Voucher #{v.voucherId}</span>
-              </p>
-              <p className="mt-1 text-xs text-muted">Minted {new Date(v.mintedAt * 1000).toLocaleDateString()}</p>
-              <p className="mt-0.5 text-xs text-muted">Valid until {new Date(v.expiresAt * 1000).toLocaleDateString()}</p>
-            </div>
-            <div className="flex items-center border-l-2 border-dashed border-line-strong px-4">
-              {v.presented ? (
-                <span className="thump-in -rotate-[8deg] rounded-md border-4 border-stamp-blue px-3 py-0.5 font-display text-base font-extrabold uppercase tracking-wide text-stamp-blue opacity-95">
-                  Presented
-                </span>
-              ) : (
-                <span className="rounded-full border-2 border-ink px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-widest text-ink">
+      <div className="flex flex-col gap-6">
+        {vouchers.map((v) => (
+          <Receipt key={v.address} className="px-6 pb-4 pt-4">
+            <p className="font-mono text-[10.5px] uppercase tracking-wide text-muted">Voucher slip · Token-2022 NFT</p>
+
+            {v.presented ? (
+              <p className="mt-1.5 font-display text-4xl font-extrabold uppercase leading-none text-ink">{v.rewardLabel}</p>
+            ) : (
+              <div className="mt-1.5 flex flex-wrap items-start justify-between gap-2">
+                <p className="font-display text-4xl font-extrabold uppercase leading-none text-ink">{v.rewardLabel}</p>
+                <span className="rounded-full border-2 border-ink px-2.5 py-0.5 font-mono text-xs font-semibold uppercase tracking-widest text-ink">
                   Ready
                 </span>
-              )}
-            </div>
-          </div>
+              </div>
+            )}
 
-          <div className="flex flex-col gap-3 border-t border-line p-4">
-            {!v.presented ? (
+            <div className="mt-2 flex flex-col gap-0.5">
+              <ReceiptRow label={v.businessName} value={`#${v.voucherId}`} />
+              <ReceiptRow label="Status" value={v.presented ? "Presented" : "Ready"} />
+              <ReceiptRow label="Valid until" value={new Date(v.expiresAt * 1000).toLocaleDateString()} />
+            </div>
+
+            {v.presented ? (
               <>
-                <Button disabled={busy === v.address} onClick={() => handlePresent(v)}>
-                  {busy === v.address ? "Presenting…" : "Present to merchant"}
-                </Button>
-                <div className="flex gap-2">
+                <p className="mt-2.5 max-w-sm font-mono text-[10.5px] uppercase text-muted">
+                  Show this to the merchant. While it is presented it can&apos;t be moved. When they redeem it, the NFT is burned.
+                </p>
+                <div className="mt-3">
+                  <Button variant="outline" disabled={busy === v.address} onClick={() => handleCancel(v)}>
+                    {busy === v.address ? "Cancelling…" : "Cancel"}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mt-3">
+                  <Button size="lg" className="w-full sm:w-auto" disabled={busy === v.address} onClick={() => handlePresent(v)}>
+                    {busy === v.address ? "Presenting…" : "Present to merchant"}
+                  </Button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
                   <input
                     aria-label="Recipient's wallet address"
                     placeholder="Recipient's address"
@@ -279,26 +291,23 @@ export function MyVouchers({
                   </Button>
                 </div>
               </>
-            ) : (
-              <>
-                <p className="text-sm text-muted">
-                  Show this to the merchant. While it is presented it can&apos;t be moved. When they redeem it, the NFT is burned.
-                </p>
-                <Button variant="outline" disabled={busy === v.address} onClick={() => handleCancel(v)}>
-                  {busy === v.address ? "Cancelling…" : "Cancel"}
-                </Button>
-              </>
             )}
-          </div>
 
-          <div className="flex flex-wrap gap-2 border-t border-line bg-paper-2/50 px-4 py-3">
-            <OnChainId label="NFT mint" address={v.mint.toBase58()} />
-            <OnChainId label="Token account" address={v.holderToken.toBase58()} />
-            <OnChainId label="Voucher" address={v.address} />
-          </div>
-        </article>
-      ))}
-      {error && <p role="alert" className="text-sm text-stamp-red">{error}</p>}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <OnChainId label="NFT mint" address={v.mint.toBase58()} />
+              {v.presented && <OnChainId label="Token account" address={v.holderToken.toBase58()} />}
+              <OnChainId label="Voucher" address={v.address} />
+            </div>
+
+            {v.presented && (
+              <span className="thump-in absolute right-4 top-6 -rotate-[8deg] rounded-md border-4 border-stamp-blue px-3 py-0.5 font-display text-2xl font-extrabold uppercase tracking-wide text-stamp-blue opacity-95">
+                Presented
+              </span>
+            )}
+          </Receipt>
+        ))}
+      </div>
+      {error && <p role="alert" className="err">{error}</p>}
     </section>
   );
 }

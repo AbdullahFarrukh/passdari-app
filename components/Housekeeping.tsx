@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { Button } from "@/components/ui/Button";
+import { Receipt } from "@/components/ui/Receipt";
 import { PROGRAM_ID } from "@/lib/explorer";
 
 // Three kinds of account hold rent nobody is coming back for: an expired receipt nobody claimed, a
@@ -77,8 +78,8 @@ export function Housekeeping({ keypair }: { keypair: Keypair }) {
   if (counts?.cardNfts) parts.push(`${counts.cardNfts} card NFT${counts.cardNfts === 1 ? "" : "s"} idle for 90 days`);
 
   return (
-    <section aria-labelledby="reclaim" className="surface p-4 sm:p-5">
-      <h2 id="reclaim" className="eyebrow">Housekeeping</h2>
+    <Receipt className="px-5 pb-4 pt-4 sm:px-6">
+      <h2 className="text-[2.125rem] leading-[0.98] text-ink">Housekeeping</h2>
       {parts.length > 0 && (
         <p className="mt-2 text-sm text-muted">{parts.join(", ")} — still holding rent.</p>
       )}
@@ -87,6 +88,6 @@ export function Housekeeping({ keypair }: { keypair: Keypair }) {
       </Button>
       {status && <p className="mt-2 text-xs text-muted">{status}</p>}
       <p className="mt-2 text-xs text-muted">A daily job does this automatically too, so this is never required.</p>
-    </section>
+    </Receipt>
   );
 }

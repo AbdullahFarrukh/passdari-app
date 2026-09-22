@@ -2,6 +2,10 @@ import Link from "next/link";
 import { PROGRAM_ID } from "@/lib/explorer";
 import { OnChainId } from "@/components/ui/OnChainId";
 import { WalletExplainer } from "@/components/WalletExplainer";
+import { Receipt } from "@/components/ui/Receipt";
+import { ReceiptRow } from "@/components/ui/ReceiptRow";
+import { LoyaltyCardReceipt } from "@/components/ui/LoyaltyCardReceipt";
+import { Barcode, BARCODE_B } from "@/components/ui/Barcode";
 import { ArrowRightIcon } from "@/components/ui/icons";
 
 const STEPS = [
@@ -11,86 +15,22 @@ const STEPS = [
   { n: "4", label: "Redeem", status: "Burned", text: "The merchant redeems it and the token is burned, so a voucher can never be used twice." },
 ];
 
-// Decorative, non-scannable bar widths — visual texture only, no data encoded.
-const BARCODE_A = [2, 4, 1, 1, 1, 2, 1, 4, 2, 1, 4, 2, 3, 2, 2, 2, 4, 3, 4, 1, 3, 2, 4, 2, 1, 1, 2, 4, 4, 2, 3, 2, 4, 2, 1, 3, 2];
-const BARCODE_B = [4, 2, 4, 1, 1, 1, 3, 3, 2, 1, 4, 3, 1, 1, 4, 2, 3, 2, 3, 3, 4, 1, 1, 4, 4, 4, 1, 3, 4, 3, 2, 1, 3, 1, 2, 4, 3, 2, 3, 1];
-
-function Barcode({ bars, width, height }: { bars: number[]; width: number; height: number }) {
-  const gap = 3;
-  let x = 0;
-  const rects = bars.map((w, i) => {
-    const rect = <rect key={i} x={x} y={0} width={w} height={height} fill="#111111" />;
-    x += w + gap;
-    return rect;
-  });
-  return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden="true" className="block">
-      {rects}
-    </svg>
-  );
-}
-
 // The receipt card that stands in for a real one, printed straight onto the counter.
-function ReceiptCard() {
+function ExampleCard() {
   return (
     <div className="relative" aria-hidden="true">
       <span className="thump-in-alt absolute -right-3.5 -top-4 z-10 rotate-[7deg] rounded-md border-4 border-stamp-blue bg-paper px-3 py-0.5 font-display text-lg font-extrabold uppercase tracking-wide text-stamp-blue opacity-95">
         On-chain
       </span>
-      <div className="tear-t" />
-      <div className="bg-surface px-6 pb-2 pt-5 sm:px-7">
-        <p className="text-center font-mono text-[10.5px] tracking-[.12em] text-muted">PASSDARI · LOYALTY CARD</p>
-        <p className="mt-2 text-center font-display text-4xl font-extrabold uppercase leading-none text-ink sm:text-5xl">Blue Door Cafe</p>
-        <p className="mt-1 text-center font-mono text-xs uppercase text-ink">Free coffee</p>
-
-        <div className="mt-4 flex items-baseline gap-2 font-mono text-xs uppercase">
-          <span className="font-bold text-ink">Stamps</span>
-          <span className="min-w-3 flex-1 -translate-y-1 border-b-2 border-dotted border-line-strong/40" />
-          <span className="font-bold text-ink">7 / 10</span>
-        </div>
-        <div className="my-3 grid grid-cols-5 gap-2">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <span
-              key={i}
-              className={
-                i < 7
-                  ? `flex aspect-square items-center justify-center bg-ink text-paper ${i === 6 ? "print-in" : ""}`
-                  : "aspect-square border-2 border-dashed border-line-strong/60"
-              }
-            >
-              {i < 7 && (
-                <svg width="60%" height="60%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
-              )}
-            </span>
-          ))}
-        </div>
-
-        <div className="flex items-baseline gap-2 font-mono text-xs uppercase">
-          <span className="text-ink">Card NFT</span>
-          <span className="min-w-3 flex-1 -translate-y-1 border-b-2 border-dotted border-line-strong/40" />
-          <span className="font-bold text-ink">In your wallet</span>
-        </div>
-        <p className="mt-1 font-mono text-[10.5px] uppercase text-muted">Can&apos;t be sent to anyone else. Burned when you cash in.</p>
-
-        <div className="mt-2 flex items-baseline gap-2 font-mono text-xs uppercase">
-          <span className="text-ink">Card</span>
-          <span className="min-w-3 flex-1 -translate-y-1 border-b-2 border-dotted border-line-strong/40" />
-          <span className="font-bold text-ink">4EfY…b6wt</span>
-        </div>
-        <div className="flex items-baseline gap-2 font-mono text-xs uppercase">
-          <span className="text-ink">NFT</span>
-          <span className="min-w-3 flex-1 -translate-y-1 border-b-2 border-dotted border-line-strong/40" />
-          <span className="font-bold text-ink">8qsC…bjbQ</span>
-        </div>
-
-        <div className="my-3 flex justify-center">
-          <Barcode bars={BARCODE_A} width={230} height={32} />
-        </div>
-        <p className="pb-1.5 text-center font-mono text-[10.5px] uppercase tracking-[.14em] text-ink">*** Thank you ***</p>
-      </div>
-      <div className="tear-b" />
+      <LoyaltyCardReceipt
+        businessName="Blue Door Cafe"
+        rewardLabel="Free coffee"
+        stamps={7}
+        stampsRequired={10}
+        cardAddress="4EfYb1c2wPk8mV3f9qLxDzT6hR2sYnWo1eJb4pXmAb6wt"
+        cardNft={{ mint: "8qsCz3Km5tWyR7vB2nXpLfQd9uHa1sYo6eDm4wKbjbQ", held: true }}
+        interactive={false}
+      />
     </div>
   );
 }
@@ -98,36 +38,26 @@ function ReceiptCard() {
 // "Your receipt": the app's own explanation, printed as one, with a line per step.
 function HowItWorksReceipt() {
   return (
-    <div>
-      <div className="tear-t" />
-      <div className="bg-surface px-6 pb-2 pt-5 sm:px-8">
-        <p className="text-center font-mono text-[10.5px] tracking-[.14em] text-muted">PASSDARI · HOW IT WORKS</p>
-        <p className="mt-1.5 text-center font-display text-3xl font-extrabold uppercase text-ink">Your receipt</p>
+    <Receipt className="px-6 pb-2 pt-5 sm:px-8">
+      <p className="text-center font-mono text-[10.5px] tracking-[.14em] text-muted">PASSDARI · HOW IT WORKS</p>
+      <p className="mt-1.5 text-center font-display text-3xl font-extrabold uppercase text-ink">Your receipt</p>
 
-        <div className="mt-4 flex flex-col gap-3.5">
-          {STEPS.map((s) => (
-            <div key={s.n}>
-              <div className="flex items-baseline gap-2 font-mono text-sm font-bold uppercase">
-                <span>{s.n} {s.label}</span>
-                <span className="min-w-3 flex-1 -translate-y-1 border-b-2 border-dotted border-line-strong/40" />
-                <span>{s.status}</span>
-              </div>
-              <p className="mt-0.5 text-sm text-muted">{s.text}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-3 flex items-baseline gap-2 border-t-2 border-line pt-2.5 font-mono text-sm font-bold uppercase">
-          <span>Total</span>
-          <span className="min-w-3 flex-1 -translate-y-1 border-b-2 border-dotted border-line-strong/40" />
-          <span>1 Free coffee</span>
-        </div>
-        <div className="my-3 flex justify-center">
-          <Barcode bars={BARCODE_B} width={250} height={34} />
-        </div>
+      <div className="mt-4 flex flex-col gap-3.5">
+        {STEPS.map((s) => (
+          <div key={s.n}>
+            <ReceiptRow label={`${s.n} ${s.label}`} value={s.status} className="text-sm" />
+            <p className="mt-0.5 text-sm text-muted">{s.text}</p>
+          </div>
+        ))}
       </div>
-      <div className="tear-b" />
-    </div>
+
+      <div className="mt-3 border-t-2 border-line pt-2.5">
+        <ReceiptRow label="Total" value="1 Free coffee" className="text-sm" />
+      </div>
+      <div className="my-3 flex justify-center">
+        <Barcode bars={BARCODE_B} width={250} height={34} />
+      </div>
+    </Receipt>
   );
 }
 
@@ -154,7 +84,7 @@ export default function HomePage() {
             <p className="mt-4 text-sm text-ink">No wallet app and no SOL needed. Just a username and password.</p>
           </div>
           <div className="mx-auto w-full max-w-sm lg:mx-0">
-            <ReceiptCard />
+            <ExampleCard />
           </div>
         </div>
       </section>

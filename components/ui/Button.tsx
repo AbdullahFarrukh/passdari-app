@@ -1,7 +1,7 @@
 import type { ButtonHTMLAttributes } from "react";
 
 type Variant = "primary" | "danger" | "outline" | "ghost";
-type Size = "md" | "sm";
+type Size = "md" | "sm" | "lg";
 
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-ink text-paper hover:bg-ink-deep",
@@ -9,7 +9,11 @@ const VARIANTS: Record<Variant, string> = {
   outline: "border-[2.5px] border-ink text-ink bg-transparent hover:bg-ink hover:text-paper",
   ghost: "text-ink underline-offset-4 hover:underline",
 };
-const SIZES: Record<Size, string> = { md: "min-h-11 px-5 text-sm", sm: "min-h-9 px-4 text-xs" };
+const SIZES: Record<Size, string> = {
+  lg: "min-h-14 px-7 text-xl",
+  md: "min-h-11 px-5 text-sm",
+  sm: "min-h-9 px-4 text-xs",
+};
 
 export function Button({ variant = "primary", size = "md", className = "", type = "button", ...rest }:
   ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }) {

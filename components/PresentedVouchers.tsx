@@ -7,6 +7,7 @@ import { translateError } from "@/lib/errorMessages";
 import { TOKEN_2022_PROGRAM_ID, findHolders } from "@/lib/vouchers";
 import { Button } from "@/components/ui/Button";
 import { OnChainId } from "@/components/ui/OnChainId";
+import { Receipt } from "@/components/ui/Receipt";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
@@ -142,10 +143,10 @@ export function PresentedVouchers({
   const count = vouchers?.length ?? 0;
 
   return (
-    <section aria-labelledby="presented" className="surface p-4 sm:p-5">
+    <Receipt className="px-5 pb-4 pt-4 sm:px-6">
       <div className="flex items-center justify-between">
-        <h2 id="presented" className="eyebrow">Presented vouchers</h2>
-        {count > 0 && <span className="rounded-full bg-stamp-red px-2 py-0.5 font-mono text-xs text-paper">{count}</span>}
+        <h2 className="text-[2.125rem] leading-[0.98] text-ink">Presented vouchers</h2>
+        {count > 0 && <span className="rounded-full bg-stamp-red px-2 py-0.5 font-mono text-xs text-white">{count}</span>}
       </div>
 
       {count === 0 ? (
@@ -153,17 +154,17 @@ export function PresentedVouchers({
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
           {vouchers!.map((v) => (
-            <li key={v.address} className="rounded-lg border border-line bg-paper p-3">
+            <li key={v.address} className="rounded-xl border-2 border-ink p-3.5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="font-mono font-semibold text-ink">Voucher #{v.voucherId}</p>
                   <p className="text-xs text-muted">Redeeming burns the NFT.</p>
                 </div>
-                <Button variant="danger" size="sm" disabled={busy === v.address} onClick={() => handleRedeem(v)}>
+                <Button variant="danger" disabled={busy === v.address} onClick={() => handleRedeem(v)}>
                   {busy === v.address ? "Redeeming…" : "Redeem"}
                 </Button>
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2.5 flex flex-wrap gap-2">
                 <OnChainId label="Holder" address={v.holder} />
                 <OnChainId label="NFT mint" address={v.mint.toBase58()} />
               </div>
@@ -171,7 +172,7 @@ export function PresentedVouchers({
           ))}
         </ul>
       )}
-      {error && <p role="alert" className="mt-3 text-sm text-stamp-red">{error}</p>}
-    </section>
+      {error && <p role="alert" className="err mt-3">{error}</p>}
+    </Receipt>
   );
 }

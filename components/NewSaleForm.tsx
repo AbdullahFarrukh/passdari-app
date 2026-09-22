@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { Button } from "@/components/ui/Button";
 import { OnChainId } from "@/components/ui/OnChainId";
+import { Receipt } from "@/components/ui/Receipt";
 import { CheckIcon } from "@/components/ui/icons";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
@@ -124,27 +125,29 @@ export function NewSaleForm({
   const validFor = ttlSeconds < 3600 ? `${Math.round(ttlSeconds / 60)} minutes` : `${Math.round(ttlSeconds / 3600)} hours`;
 
   return (
-    <section aria-labelledby="new-sale" className="surface p-4 sm:p-5">
-      <h2 id="new-sale" className="eyebrow">New sale</h2>
+    <Receipt className="px-5 pb-4 pt-4 sm:px-6">
+      <h2 className="text-[2.125rem] leading-[0.98] text-ink">New sale</h2>
       <p className="mt-1 text-sm text-muted">Enter the purchase amount to create a one-time receipt the customer can scan.</p>
-      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
+      <form onSubmit={handleSubmit} className="mt-3.5 flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="sale-amount" className="eyebrow">Purchase amount (PKR)</label>
           <input id="sale-amount" type="number" min={1} className="field font-mono" value={amountPkr} onChange={(e) => setAmountPkr(Number(e.target.value))} />
         </div>
-        {error && <p role="alert" className="text-sm text-stamp-red">{error}</p>}
-        <Button type="submit" disabled={submitting}>{submitting ? "Issuing…" : "New sale"}</Button>
+        {error && <p role="alert" className="err">{error}</p>}
+        <Button size="lg" type="submit" className="w-full" disabled={submitting}>{submitting ? "Issuing…" : "New sale"}</Button>
       </form>
 
       {qrImage && secretHex && (
-        <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-line bg-paper p-4">
-          <p className="flex items-center gap-1.5 text-sm font-medium text-verified"><CheckIcon size={16} /> Ready to scan</p>
-          <img src={qrImage} alt="Receipt QR code" width={180} height={180} className="rounded-md border border-line" />
+        <div className="mt-5 flex flex-col items-center gap-3 border-t-2 border-dashed border-ink pt-4">
+          <p className="flex items-center gap-1.5 font-mono text-xs font-semibold uppercase text-stamp-blue"><CheckIcon size={16} /> Ready to scan</p>
+          <div className="border-[3px] border-ink bg-surface p-2">
+            <img src={qrImage} alt="Receipt QR code" width={180} height={180} className="block" />
+          </div>
           <p className="text-center text-xs text-muted">Valid for {validFor}. It can be claimed once. Or share the code instead.</p>
           <Button variant="outline" size="sm" onClick={handleCopy}>{copied ? "Copied" : "Copy code"}</Button>
           {receiptAddress && <OnChainId label="Receipt" address={receiptAddress} />}
         </div>
       )}
-    </section>
+    </Receipt>
   );
 }

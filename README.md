@@ -47,7 +47,7 @@ to `localnet` or `mainnet-beta` to change them (`lib/explorer.ts`).
 - `react-zxing` for the camera QR scanner, with manual code entry as a mandatory fallback
 - `@google/genai` (Gemini) for the AI copilot, with three fixed, clickable questions and a real, honest fallback (plain-templated real data, clearly labeled) if the live AI call fails
 - Upstash Redis (`@upstash/redis`) for one small list: customer display names
-- IBM Plex Sans / IBM Plex Mono, custom color palette (kraft paper background, ink-blue and stamp-red accents) — the design tokens are in `app/globals.css` and the shared pieces (buttons, address chips, stamp rows) in `components/ui/`
+- "Bill": a fluorescent-yellow counter, black ink and white receipt paper, with stamp blue and alert red as the only two accents — Big Shoulders for headings and buttons, Martian Mono for data and labels, Figtree for body text. Cards and tickets are printed as receipts (torn top and bottom edge, dotted-leader rows) via `components/ui/Receipt.tsx` and `ReceiptRow.tsx`; the design tokens are in `app/globals.css` and the rest of the shared pieces (buttons, address chips, stamp cards) are in `components/ui/`
 
 ## Running locally
 

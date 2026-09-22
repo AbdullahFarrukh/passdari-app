@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { NewSaleForm } from "@/components/NewSaleForm";
 import { PresentedVouchers } from "@/components/PresentedVouchers";
 import { MerchantCopilot } from "@/components/MerchantCopilot";
-import { ReclaimExpiredReceipts } from "@/components/ReclaimExpiredReceipts";
+import { Housekeeping } from "@/components/Housekeeping";
 import { AuthPanel } from "@/components/AuthPanel";
 import { AccountBar } from "@/components/AccountBar";
 import { MnemonicNotice } from "@/components/MnemonicNotice";
@@ -200,7 +200,7 @@ export default function MerchantPage() {
 
             <div className="flex flex-col gap-6">
               <TopCustomers program={program} keypair={keypair} />
-              <ReclaimExpiredReceipts keypair={keypair} />
+              <Housekeeping keypair={keypair} />
               <details className="text-sm text-muted">
                 <summary className="cursor-pointer select-none py-1 hover:text-ink">Demo tools</summary>
                 <div className="mt-2">

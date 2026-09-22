@@ -6,7 +6,7 @@ import { signUp, signIn, recoverAccount } from "@/lib/customerAuth";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
 import { saveDisplayName } from "@/lib/displayName";
-import { cardMetadataUri, cardMintExists, cardMintPda } from "@/lib/cardNft";
+import { cardMetadataUri, cardMintExists, cardMintPda, cardNftRecordPda } from "@/lib/cardNft";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, tokenAccountFor } from "@/lib/vouchers";
 import { MyCards } from "@/components/MyCards";
 import { MyVouchers } from "@/components/MyVouchers";
@@ -211,7 +211,12 @@ export default function CustomerPage() {
       // a new one with the first stamp after cashing in, so when the card's current NFT isn't there yet the
       // same transaction makes it, and the customer signs once for both.
       const connection = program.provider.connection;
-      const existingCard = await program.account.loyaltyCard.fetchNullable(cardPda);
+      // The receipt records who paid its rent, and claiming sends it back there. A code that was already
+      // used has no receipt left; the program then says so, and the customer sees the usual message.
+      const [existingCard, receipt] = await Promise.all([
+        program.account.loyaltyCard.fetchNullable(cardPda),
+        program.account.receipt.fetchNullable(receiptPda),
+      ]);
       const cardMint = cardMintPda(program.programId, cardPda, existingCard?.nftCycle ?? 0);
       const needsCardNft = !(await cardMintExists(connection, cardMint));
 
@@ -223,6 +228,7 @@ export default function CustomerPage() {
           card: cardPda,
           customer: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
+          rentPayer: receipt?.rentPayer ?? RELAYER_PUBLIC_KEY,
           systemProgram: SystemProgram.programId,
         } as any);
 
@@ -233,6 +239,7 @@ export default function CustomerPage() {
             business: businessPda,
             card: cardPda,
             mint: cardMint,
+            record: cardNftRecordPda(program.programId, cardMint),
             customerToken: tokenAccountFor(keypair.publicKey, cardMint),
             customer: keypair.publicKey,
             relayer: RELAYER_PUBLIC_KEY,

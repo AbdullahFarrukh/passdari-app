@@ -21,6 +21,13 @@ export function cardMintPda(programId: PublicKey, card: PublicKey, cycle: number
   return mint;
 }
 
+// Records who paid for a given cycle's NFT, at ["card_nft", mint]. Rent from the NFT goes back to exactly
+// this wallet — when the card is cashed in, or when the NFT is recycled after 90 days with no stamp.
+export function cardNftRecordPda(programId: PublicKey, mint: PublicKey): PublicKey {
+  const [record] = PublicKey.findProgramAddressSync([Buffer.from("card_nft"), mint.toBuffer()], programId);
+  return record;
+}
+
 // The link stored inside the NFT, pointing at this app's own small page that describes it
 // (see app/c/[mint]/route.ts). Too long to fit? Mint without one: the name and symbol are stored
 // on-chain either way.

@@ -24,6 +24,9 @@ type VoucherEntry = {
   businessName: string;
   rewardLabel: string;
   mintedAt: number;
+  expiresAt: number;
+  // Who paid for the voucher. Rent from its accounts goes back there.
+  rentPayer: PublicKey;
 };
 
 // While a voucher is presented, its holder is waiting for the merchant to redeem it, so the list refreshes by
@@ -95,6 +98,8 @@ export function MyVouchers({
           businessName: business?.name ?? "Unknown business",
           rewardLabel: business?.rewardLabel ?? "Reward",
           mintedAt: Number((entry.account.mintedAt as { toString: () => string }).toString()),
+          expiresAt: Number((entry.account.expiresAt as { toString: () => string }).toString()),
+          rentPayer: entry.account.rentPayer as PublicKey,
         };
       });
 
@@ -206,6 +211,7 @@ export function MyVouchers({
           newOwner,
           owner: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
+          rentPayer: v.rentPayer,
           tokenProgram: TOKEN_2022_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           systemProgram: SystemProgram.programId,
@@ -239,6 +245,7 @@ export function MyVouchers({
                 {v.businessName} · <span className="font-mono">Voucher #{v.voucherId}</span>
               </p>
               <p className="mt-1 text-xs text-muted">Minted {new Date(v.mintedAt * 1000).toLocaleDateString()}</p>
+              <p className="mt-0.5 text-xs text-muted">Valid until {new Date(v.expiresAt * 1000).toLocaleDateString()}</p>
             </div>
             <div className="flex items-center border-l-2 border-dashed border-line-strong px-4">
               <span

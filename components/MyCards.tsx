@@ -16,7 +16,7 @@ import {
   voucherMetadataUri,
   voucherMintPda,
 } from "@/lib/vouchers";
-import { cardMintPda, findCardNfts } from "@/lib/cardNft";
+import { cardMintPda, cardNftRecordPda, findCardNfts } from "@/lib/cardNft";
 
 type CardWithBusiness = {
   cardAddress: string;
@@ -163,6 +163,11 @@ export function MyCards({
       const cardAddress = new PublicKey(card.cardAddress);
       const cardMint = cardMintPda(program.programId, cardAddress, card.nftCycle);
       const cardToken = tokenAccountFor(keypair.publicKey, cardMint);
+      const cardNftRecord = cardNftRecordPda(program.programId, cardMint);
+      // The record says who paid for the card's NFT, so its rent goes back to exactly them. A card NFT
+      // minted before this record existed has none, and its rent goes to the relayer instead.
+      const recordAccount = await program.account.cardNft.fetchNullable(cardNftRecord);
+      const cardRentPayer = recordAccount?.rentPayer ?? RELAYER_PUBLIC_KEY;
 
       // Step 1: mint — this creates new accounts (the voucher, its NFT and
       // the customer's token account), so it goes through the relayer, same
@@ -177,6 +182,8 @@ export function MyCards({
           customerToken,
           cardMint,
           cardToken,
+          cardNftRecord,
+          cardRentPayer,
           customer: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
           tokenProgram: TOKEN_2022_PROGRAM_ID,

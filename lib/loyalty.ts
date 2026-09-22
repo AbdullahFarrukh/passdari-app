@@ -69,6 +69,10 @@ export type Loyalty = {
         },
         {
           "name": "receipt",
+          "docs": [
+            "Closed here. Its rent goes back to whoever paid for it, never to the",
+            "business: the merchant didn't pay for it."
+          ],
           "writable": true
         },
         {
@@ -114,6 +118,17 @@ export type Loyalty = {
           "signer": true
         },
         {
+          "name": "rentPayer",
+          "docs": [
+            "The wallet that paid the receipt's rent, recorded in the receipt.",
+            "Receives it back. Normally this is the relayer itself."
+          ],
+          "writable": true,
+          "relations": [
+            "receipt"
+          ]
+        },
+        {
           "name": "systemProgram",
           "address": "11111111111111111111111111111111"
         }
@@ -129,6 +144,56 @@ export type Loyalty = {
           }
         }
       ]
+    },
+    {
+      "name": "closeExpiredVoucher",
+      "discriminator": [
+        142,
+        164,
+        210,
+        177,
+        34,
+        32,
+        225,
+        120
+      ],
+      "accounts": [
+        {
+          "name": "voucher",
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "writable": true,
+          "relations": [
+            "voucher"
+          ]
+        },
+        {
+          "name": "holderToken",
+          "docs": [
+            "(the holder may have burned it themselves). Checked in the handler: it",
+            "must belong to this voucher's mint, and once this runs no token may be",
+            "left anywhere."
+          ],
+          "writable": true
+        },
+        {
+          "name": "rentPayer",
+          "docs": [
+            "The wallet that paid for the voucher, recorded in it. Receives the rent."
+          ],
+          "writable": true,
+          "relations": [
+            "voucher"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
     },
     {
       "name": "initialize",
@@ -365,6 +430,35 @@ export type Loyalty = {
           }
         },
         {
+          "name": "record",
+          "docs": [
+            "Records who paid for this NFT, so its rent goes back to exactly that",
+            "wallet when the NFT is burned."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  114,
+                  100,
+                  95,
+                  110,
+                  102,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
           "name": "customerToken",
           "docs": [
             "associated token program, which checks that this is the right address."
@@ -484,8 +578,9 @@ export type Loyalty = {
           "name": "mint",
           "docs": [
             "The voucher's NFT. The voucher account is its mint authority, freeze",
-            "authority and permanent delegate, so only this program can freeze,",
-            "thaw or burn it. The metadata lives inside the mint account itself."
+            "authority, permanent delegate and close authority, so only this",
+            "program can freeze, thaw, burn or close it. The metadata lives inside",
+            "the mint account itself."
           ],
           "writable": true,
           "pda": {
@@ -619,6 +714,42 @@ export type Loyalty = {
           "writable": true
         },
         {
+          "name": "cardNftRecord",
+          "docs": [
+            "by the NFT's mint; it may not exist (no NFT, or one made before records",
+            "existed), which the handler checks."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  114,
+                  100,
+                  95,
+                  110,
+                  102,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "cardMint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "cardRentPayer",
+          "docs": [
+            "be the wallet it names, which the handler checks."
+          ],
+          "writable": true
+        },
+        {
           "name": "customer",
           "docs": [
             "The customer converting their stamps into a voucher. Signs to",
@@ -718,26 +849,15 @@ export type Loyalty = {
           "writable": true
         },
         {
-          "name": "business",
+          "name": "rentPayer",
+          "docs": [
+            "The wallet that paid the receipt's rent, recorded in the receipt.",
+            "Receives it back — not the merchant, who never paid for it."
+          ],
+          "writable": true,
           "relations": [
             "receipt"
           ]
-        },
-        {
-          "name": "authority",
-          "signer": true,
-          "relations": [
-            "business"
-          ]
-        },
-        {
-          "name": "relayer",
-          "docs": [
-            "The relayer, receiving back the rent it originally paid to create",
-            "this receipt — not the merchant, who never paid for it."
-          ],
-          "writable": true,
-          "signer": true
         }
       ],
       "args": []
@@ -785,12 +905,17 @@ export type Loyalty = {
         },
         {
           "name": "voucher",
+          "docs": [
+            "Closed here. Its rent goes back to whoever paid for it, never to the",
+            "merchant: the merchant didn't pay for it."
+          ],
           "writable": true
         },
         {
           "name": "mint",
           "docs": [
-            "Writable because burning lowers its supply."
+            "Writable because burning lowers its supply, and because it is closed",
+            "once it is empty."
           ],
           "writable": true,
           "relations": [
@@ -823,6 +948,18 @@ export type Loyalty = {
             "a payer."
           ],
           "signer": true
+        },
+        {
+          "name": "rentPayer",
+          "docs": [
+            "The wallet that paid for the voucher, recorded in it. Receives back",
+            "the rent of the voucher account, its NFT and the holder's token",
+            "account. Normally this is the relayer itself."
+          ],
+          "writable": true,
+          "relations": [
+            "voucher"
+          ]
         },
         {
           "name": "tokenProgram",
@@ -922,6 +1059,113 @@ export type Loyalty = {
           "type": "u32"
         }
       ]
+    },
+    {
+      "name": "retireIdleCardNft",
+      "discriminator": [
+        77,
+        244,
+        46,
+        194,
+        9,
+        6,
+        229,
+        49
+      ],
+      "accounts": [
+        {
+          "name": "card",
+          "writable": true
+        },
+        {
+          "name": "customer",
+          "docs": [
+            "never signs, and must be the customer the card names."
+          ],
+          "relations": [
+            "card"
+          ]
+        },
+        {
+          "name": "cardMint",
+          "docs": [
+            "cycle, and its record (below) only exists if the NFT does."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  114,
+                  100,
+                  95,
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "card"
+              },
+              {
+                "kind": "account",
+                "path": "card.nft_cycle",
+                "account": "loyaltyCard"
+              }
+            ]
+          }
+        },
+        {
+          "name": "cardToken",
+          "writable": true
+        },
+        {
+          "name": "record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  114,
+                  100,
+                  95,
+                  110,
+                  102,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "cardMint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rentPayer",
+          "docs": [
+            "The wallet that paid for the NFT, recorded in its record. Receives the",
+            "rent."
+          ],
+          "writable": true,
+          "relations": [
+            "record"
+          ]
+        },
+        {
+          "name": "tokenProgram",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
     },
     {
       "name": "transferVoucher",
@@ -1035,6 +1279,18 @@ export type Loyalty = {
           "signer": true
         },
         {
+          "name": "rentPayer",
+          "docs": [
+            "The wallet that paid for the voucher, recorded in it. Receives back",
+            "the rent of the sender's token account, which is empty once the",
+            "voucher has moved. Normally this is the relayer itself."
+          ],
+          "writable": true,
+          "relations": [
+            "voucher"
+          ]
+        },
+        {
           "name": "tokenProgram",
           "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         },
@@ -1127,6 +1383,19 @@ export type Loyalty = {
         183,
         210,
         177
+      ]
+    },
+    {
+      "name": "cardNft",
+      "discriminator": [
+        234,
+        102,
+        146,
+        79,
+        206,
+        88,
+        37,
+        62
       ]
     },
     {
@@ -1267,6 +1536,26 @@ export type Loyalty = {
       "code": 6013,
       "name": "notVoucherHolder",
       "msg": "This token account does not hold the voucher"
+    },
+    {
+      "code": 6014,
+      "name": "voucherExpired",
+      "msg": "This voucher has expired"
+    },
+    {
+      "code": 6015,
+      "name": "voucherNotExpired",
+      "msg": "This voucher has not expired yet"
+    },
+    {
+      "code": 6016,
+      "name": "cardNftNotIdle",
+      "msg": "This card has had a stamp in the last 90 days"
+    },
+    {
+      "code": 6017,
+      "name": "wrongRentPayer",
+      "msg": "The rent must go back to the wallet that paid it"
     }
   ],
   "types": [
@@ -1330,6 +1619,28 @@ export type Loyalty = {
           {
             "name": "totalRedemptions",
             "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "cardNft",
+      "docs": [
+        "Who paid for a card NFT (its mint, the customer's token account and this",
+        "record), so that rent goes back to exactly that wallet when the NFT is",
+        "burned: at cash-in, or once the card has gone 90 days without a stamp.",
+        "Lives at `[\"card_nft\", mint]` and is closed together with the NFT."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "rentPayer",
+            "type": "pubkey"
           },
           {
             "name": "bump",
@@ -1436,6 +1747,15 @@ export type Loyalty = {
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "rentPayer",
+            "docs": [
+              "Whoever paid this receipt's rent (the relayer, when the app issues",
+              "it). The rent goes back to exactly this wallet when the receipt is",
+              "claimed or reclaimed, so nobody else can collect it."
+            ],
+            "type": "pubkey"
           }
         ]
       }
@@ -1498,6 +1818,24 @@ export type Loyalty = {
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "rentPayer",
+            "docs": [
+              "Whoever paid the rent for this voucher, its NFT and the first holder's",
+              "token account (the relayer, when the app mints it). All of that rent",
+              "goes back to exactly this wallet when the voucher is redeemed."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "expiresAt",
+            "docs": [
+              "When the voucher stops being usable (90 days after minting). After",
+              "this it can't be presented, gifted or redeemed, and anyone can close",
+              "it so its rent goes back to `rent_payer`."
+            ],
+            "type": "i64"
           }
         ]
       }

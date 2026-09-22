@@ -16,6 +16,8 @@ type PresentedVoucher = {
   mint: PublicKey;
   holder: string;
   holderToken: PublicKey;
+  // Who paid for the voucher. Redeeming sends all its rent back there.
+  rentPayer: PublicKey;
 };
 
 export function PresentedVouchers({
@@ -69,6 +71,7 @@ export function PresentedVouchers({
               mint: entry.account.mint as PublicKey,
               holder: holder.owner.toBase58(),
               holderToken: holder.tokenAccount,
+              rentPayer: entry.account.rentPayer as PublicKey,
             },
           ];
         })
@@ -96,8 +99,10 @@ export function PresentedVouchers({
         program.programId
       );
 
-      // Redeeming burns the voucher's NFT. No card is involved, so a voucher
-      // that was gifted to someone with no card here redeems just the same.
+      // Redeeming burns the voucher's NFT, then closes it, the holder's token
+      // account and the voucher record, sending their rent back to whoever
+      // paid for them. No card is involved, so a voucher that was gifted to
+      // someone with no card here redeems just the same.
       const tx = await program.methods
         .redeemVoucher()
         .accounts({
@@ -107,6 +112,7 @@ export function PresentedVouchers({
           holderToken: v.holderToken,
           authority: keypair.publicKey,
           relayer: RELAYER_PUBLIC_KEY,
+          rentPayer: v.rentPayer,
           tokenProgram: TOKEN_2022_PROGRAM_ID,
         } as any)
         .transaction();

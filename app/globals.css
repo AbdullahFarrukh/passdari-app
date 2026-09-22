@@ -106,6 +106,16 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
   background-size: 100% 32px;
 }
 
+/* The torn edge of a receipt, top and bottom of a paper slip. Pairs with a flat-cornered (not
+   rounded) card in between — used for the home page's bespoke receipt-styled panels. */
+.tear-t, .tear-b {
+  height: 9px;
+  background:
+    linear-gradient(135deg, transparent 50%, var(--surface) 50%) 0 0/14px 14px,
+    linear-gradient(225deg, transparent 50%, var(--surface) 50%) 0 0/14px 14px;
+}
+.tear-b { transform: scaleY(-1); }
+
 /* A rubber stamp landing: used once, on entrance, for the small rotated tags that read as "stamped".
    Never applied to anything that re-renders on a poll timer. */
 @keyframes stamp-thump {
@@ -115,6 +125,25 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 }
 .thump-in {
   animation: stamp-thump 0.4s cubic-bezier(.23, 1, .32, 1) both;
+}
+@keyframes stamp-thump-alt {
+  0% { transform: scale(1.35) rotate(7deg); opacity: 0; }
+  55% { transform: scale(0.94) rotate(7deg); opacity: 1; }
+  100% { transform: scale(1) rotate(7deg); opacity: 1; }
+}
+.thump-in-alt {
+  animation: stamp-thump-alt 0.4s cubic-bezier(.23, 1, .32, 1) both;
+}
+
+/* A stamp printing onto paper: used once, on entrance, for the newest square in a stamp row. */
+@keyframes stamp-print {
+  0% { transform: scaleY(0.15); opacity: 0.4; }
+  40% { transform: scaleY(1.06); opacity: 1; }
+  60%, 100% { transform: scaleY(1); opacity: 1; }
+}
+.print-in {
+  transform-origin: top;
+  animation: stamp-print 0.5s cubic-bezier(.23, 1, .32, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

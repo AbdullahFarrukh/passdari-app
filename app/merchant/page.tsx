@@ -199,7 +199,7 @@ export default function MerchantPage() {
             </div>
 
             <div className="flex flex-col gap-6">
-              <TopCustomers program={program} keypair={keypair} />
+              <TopCustomers program={program} keypair={keypair} refreshKey={refreshKey} />
               <Housekeeping keypair={keypair} />
               <details className="text-sm text-muted">
                 <summary className="cursor-pointer select-none py-1 hover:text-ink">Demo tools</summary>

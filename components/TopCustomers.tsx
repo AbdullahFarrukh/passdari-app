@@ -12,7 +12,7 @@ type TopCustomer = {
   name: string | null;
 };
 
-export function TopCustomers({ program, keypair }: { program: Program<Loyalty> | null; keypair: Keypair }) {
+export function TopCustomers({ program, keypair, refreshKey }: { program: Program<Loyalty> | null; keypair: Keypair; refreshKey: number }) {
   const [topCustomers, setTopCustomers] = useState<TopCustomer[] | null>(null);
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export function TopCustomers({ program, keypair }: { program: Program<Loyalty> |
     }
 
     load();
-  }, [program, keypair]);
+  }, [program, keypair, refreshKey]);
 
   return (
     <section aria-labelledby="top-customers" className="surface p-4 sm:p-5">

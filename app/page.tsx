@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CLUSTER_LABEL, PROGRAM_ID } from "@/lib/explorer";
 import { OnChainId } from "@/components/ui/OnChainId";
 import { WalletExplainer } from "@/components/WalletExplainer";
+import { StampRow } from "@/components/ui/StampRow";
 import { ArrowRightIcon, FlameIcon, QrIcon, ReceiptIcon, ShieldIcon, TicketIcon } from "@/components/ui/icons";
 
 const STEPS = [
@@ -14,16 +15,14 @@ const STEPS = [
 // A decorative card, drawn to look like the real ones inside the app.
 function ExampleCard() {
   return (
-    <div className="surface relative p-6 shadow-[0_3px_0_var(--line)]" aria-hidden="true">
-      <span className="absolute right-5 top-5 -rotate-6 rounded-md border-2 border-stamp-red px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-widest text-stamp-red">
+    <div className="surface relative p-6" aria-hidden="true">
+      <span className="thump-in absolute right-5 top-5 -rotate-6 rounded-md border-2 border-stamp-blue px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-widest text-stamp-blue">
         On-chain
       </span>
       <p className="eyebrow">Example card</p>
-      <p className="mt-1 font-mono text-xl font-semibold text-ink">Blue Door Cafe</p>
-      <div className="mt-5 grid grid-cols-5 gap-3">
-        {Array.from({ length: 10 }).map((_, i) => (
-          <span key={i} className={`aspect-square rounded-full border-2 ${i < 7 ? "border-stamp-red bg-stamp-red/90 shadow-[inset_0_0_0_4px_var(--surface)]" : "border-dashed border-line-strong"}`} />
-        ))}
+      <p className="mt-1 font-display text-2xl font-extrabold uppercase text-ink">Blue Door Cafe</p>
+      <div className="mt-5">
+        <StampRow total={10} filled={7} />
       </div>
       <p className="mt-4 text-sm text-muted"><span className="font-mono font-semibold text-ink">7 / 10</span> stamps · Free coffee</p>
       <p className="mt-4 flex items-center gap-2 border-t border-line pt-3 text-xs text-verified">
@@ -45,10 +44,10 @@ export default function HomePage() {
               Passdari puts every stamp card and reward on Solana. Nothing to download, no wallet to install, and every stamp can be checked by anyone.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Link href="/customer" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-ink px-5 text-sm font-medium text-paper hover:bg-ink-deep">
+              <Link href="/customer" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-6 font-display text-sm font-extrabold uppercase tracking-wide text-paper hover:bg-ink-deep">
                 I&apos;m a customer <ArrowRightIcon />
               </Link>
-              <Link href="/merchant" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-ink px-5 text-sm font-medium text-ink hover:bg-ink/5">
+              <Link href="/merchant" className="inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-ink px-6 font-display text-sm font-extrabold uppercase tracking-wide text-ink hover:bg-ink hover:text-paper">
                 I&apos;m a merchant
               </Link>
             </div>

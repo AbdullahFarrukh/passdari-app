@@ -21,7 +21,7 @@ export function OnChainId({ address, label, full = false }: { address: string; l
 
   const what = label ?? "address";
   return (
-    <span className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-line bg-surface px-2 py-1">
+    <span className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md border-2 border-line bg-surface px-2 py-1">
       {label && <span className="eyebrow">{label}</span>}
       <code className={`font-mono text-xs text-charcoal ${full ? "break-all" : ""}`} title={address}>
         {full ? address : shortAddress(address)}

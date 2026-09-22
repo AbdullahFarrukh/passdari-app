@@ -102,7 +102,7 @@ export function NewSaleForm({
 
       const combinedCode = `${keypair.publicKey.toBase58()}:${hex}`;
       const qrDataUrl = await QRCode.toDataURL(combinedCode, {
-        color: { dark: "#2A2724", light: "#EDE6D6" },
+        color: { dark: "#111111", light: "#FFFFFF" },
       });
 
       setSecretHex(combinedCode);

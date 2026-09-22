@@ -1,18 +1,24 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Big_Shoulders, Martian_Mono, Figtree } from "next/font/google";
 import "./globals.css";
 import { WalletContextProvider } from "@/components/WalletContextProvider";
 import { TopBar } from "@/components/TopBar";
 import { Footer } from "@/components/Footer";
 
-const plexSans = IBM_Plex_Sans({
-  variable: "--font-plex-sans",
+const display = Big_Shoulders({
+  variable: "--font-display-face",
+  subsets: ["latin"],
+  weight: ["700", "800", "900"],
+});
+
+const mono = Martian_Mono({
+  variable: "--font-mono-face",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
+const body = Figtree({
+  variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
@@ -26,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}
+      className={`${display.variable} ${mono.variable} ${body.variable} h-full antialiased`}
     >
       <body className="flex min-h-screen flex-col">
         <TopBar />

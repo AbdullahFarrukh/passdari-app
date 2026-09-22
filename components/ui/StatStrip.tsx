@@ -1,11 +1,12 @@
-// A few headline numbers in one row.
+// A few headline numbers, printed as receipt lines: a label, a dotted leader, then the value.
 export function StatStrip({ items }: { items: { label: string; value: number | string; alert?: boolean }[] }) {
   return (
-    <dl className="surface grid grid-cols-2 sm:grid-cols-4">
-      {items.map((item, i) => (
-        <div key={item.label} className={`px-4 py-3 ${i % 2 === 1 ? "border-l border-line" : ""} ${i >= 2 ? "border-t border-line sm:border-t-0" : ""} ${i > 0 ? "sm:border-l sm:border-line" : ""}`}>
-          <dt className="eyebrow">{item.label}</dt>
-          <dd className={`mt-1 font-mono text-2xl font-semibold ${item.alert ? "text-stamp-red" : "text-ink"}`}>{item.value}</dd>
+    <dl className="surface divide-y-2 divide-line overflow-hidden">
+      {items.map((item) => (
+        <div key={item.label} className="flex items-baseline gap-3 px-4 py-2.5">
+          <dt className="eyebrow shrink-0">{item.label}</dt>
+          <span aria-hidden="true" className="-translate-y-1 min-w-4 flex-1 border-b-2 border-dotted border-line-strong/40" />
+          <dd className={`shrink-0 font-mono text-lg font-bold tabular-nums ${item.alert ? "text-stamp-red" : "text-ink"}`}>{item.value}</dd>
         </div>
       ))}
     </dl>

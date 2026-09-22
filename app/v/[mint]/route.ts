@@ -39,7 +39,11 @@ export async function GET(
     });
     if (account) {
       const voucher: any = coder.accounts.decode("Voucher", account.account.data);
-      const expiresAt = new Date(Number(voucher.expiresAt.toString()) * 1000);
+      // BorshCoder.decode() (unlike the typed Program client) returns the IDL's own field
+      // names, which are snake_case straight from the Rust struct — see the same fallback
+      // in lib/analytics.ts for the same reason.
+      const raw = voucher.expiresAt ?? voucher.expires_at;
+      const expiresAt = new Date(Number(raw.toString()) * 1000);
       validity = `Valid until ${expiresAt.toISOString().slice(0, 10)}, or until it's used, whichever comes first.`;
     }
   } catch {

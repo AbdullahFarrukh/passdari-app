@@ -76,13 +76,13 @@ h1, h2, h3, h4 {
   box-shadow: 4px 4px 0 var(--line);
 }
 
-/* Form fields: 44px tall, a visible focus ring, placeholder text that is still readable. Mono, like
+/* Form fields: 52px tall, a visible focus ring, placeholder text that is still readable. Mono, like
    a typed ledger line. */
 .field {
   width: 100%;
-  min-height: 2.75rem;
-  border-radius: 0.5rem;
-  border: 2px solid var(--line-strong);
+  min-height: 3.25rem;
+  border-radius: 0.75rem;
+  border: 2.5px solid var(--line-strong);
   background: var(--surface);
   padding: 0.5rem 0.75rem;
   font-family: var(--font-mono), monospace;
@@ -90,12 +90,12 @@ h1, h2, h3, h4 {
   color: var(--charcoal);
 }
 .field::placeholder { color: var(--muted); opacity: 0.75; }
-.field:focus-visible { outline: 2px solid var(--stamp-blue); outline-offset: 1px; border-color: var(--ink); }
+.field:focus-visible { outline: 3px solid var(--stamp-blue); outline-offset: 2px; border-color: var(--ink); }
 
 /* Every interactive thing gets a visible keyboard focus ring, in stamp blue so it reads apart from the
    ink-black borders used everywhere else. */
 a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
-  outline: 2px solid var(--stamp-blue);
+  outline: 3px solid var(--stamp-blue);
   outline-offset: 2px;
   border-radius: 0.375rem;
 }
@@ -109,9 +109,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
 /* A rubber stamp landing: used once, on entrance, for the small rotated tags that read as "stamped".
    Never applied to anything that re-renders on a poll timer. */
 @keyframes stamp-thump {
-  0% { transform: scale(1.35) rotate(-6deg); opacity: 0; }
-  55% { transform: scale(0.94) rotate(-6deg); opacity: 1; }
-  100% { transform: scale(1) rotate(-6deg); opacity: 1; }
+  0% { transform: scale(1.35) rotate(-8deg); opacity: 0; }
+  55% { transform: scale(0.94) rotate(-8deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-8deg); opacity: 1; }
 }
 .thump-in {
   animation: stamp-thump 0.4s cubic-bezier(.23, 1, .32, 1) both;

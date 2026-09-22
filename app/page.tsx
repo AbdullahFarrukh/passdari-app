@@ -16,7 +16,7 @@ const STEPS = [
 function ExampleCard() {
   return (
     <div className="surface relative p-6" aria-hidden="true">
-      <span className="thump-in absolute right-5 top-5 -rotate-6 rounded-md border-2 border-stamp-blue px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-widest text-stamp-blue">
+      <span className="thump-in absolute right-5 top-5 -rotate-[8deg] rounded-md border-4 border-stamp-blue px-3 py-0.5 font-display text-sm font-extrabold uppercase tracking-wide text-stamp-blue opacity-95">
         On-chain
       </span>
       <p className="eyebrow">Example card</p>
@@ -47,7 +47,7 @@ export default function HomePage() {
               <Link href="/customer" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-6 font-display text-sm font-extrabold uppercase tracking-wide text-paper hover:bg-ink-deep">
                 I&apos;m a customer <ArrowRightIcon />
               </Link>
-              <Link href="/merchant" className="inline-flex min-h-11 items-center gap-2 rounded-full border-2 border-ink px-6 font-display text-sm font-extrabold uppercase tracking-wide text-ink hover:bg-ink hover:text-paper">
+              <Link href="/merchant" className="inline-flex min-h-11 items-center gap-2 rounded-full border-[2.5px] border-ink px-6 font-display text-sm font-extrabold uppercase tracking-wide text-ink hover:bg-ink hover:text-paper">
                 I&apos;m a merchant
               </Link>
             </div>

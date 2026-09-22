@@ -248,13 +248,15 @@ export function MyVouchers({
               <p className="mt-0.5 text-xs text-muted">Valid until {new Date(v.expiresAt * 1000).toLocaleDateString()}</p>
             </div>
             <div className="flex items-center border-l-2 border-dashed border-line-strong px-4">
-              <span
-                className={`-rotate-6 rounded-md border-2 px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-widest ${
-                  v.presented ? "border-stamp-red text-stamp-red" : "border-verified text-verified"
-                }`}
-              >
-                {v.presented ? "Presented" : "Ready"}
-              </span>
+              {v.presented ? (
+                <span className="thump-in -rotate-[8deg] rounded-md border-4 border-stamp-blue px-3 py-0.5 font-display text-base font-extrabold uppercase tracking-wide text-stamp-blue opacity-95">
+                  Presented
+                </span>
+              ) : (
+                <span className="rounded-full border-2 border-ink px-2.5 py-1 font-mono text-xs font-semibold uppercase tracking-widest text-ink">
+                  Ready
+                </span>
+              )}
             </div>
           </div>
 

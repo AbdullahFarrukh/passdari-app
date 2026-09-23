@@ -174,3 +174,4 @@ The relayer's real secret key lives in the `RELAYER_SECRET_KEY` environment vari
 **What the app shows if it happens anyway:** every component routes its errors through `lib/errorMessages.ts`, and a genuinely empty relayer gets its own distinct message — clearly different in tone from an ordinary mistake, explicitly telling the person "this isn't something you did." It's a real, visible message either way, never a silent hang — but it's still a full outage, not something the app can route around on its own.
 
 Both connections take their address from the environment (`HELIUS_RPC_URL` for the server, `NEXT_PUBLIC_HELIUS_RPC_URL` for the browser) and fall back to the public devnet endpoint if it is missing.
+

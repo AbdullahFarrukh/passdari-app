@@ -3,25 +3,11 @@ import { GoogleGenAI } from "@google/genai";
 import { PublicKey } from "@solana/web3.js";
 import { getBusinessAnalytics } from "@/lib/analytics";
 import { verifyCopilotRequest } from "@/lib/copilotAuth";
+import { isRateLimited } from "@/lib/rateLimit";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const MAX_QUESTION_LENGTH = 300;
-
-// This endpoint calls a paid third-party API on every request, so an
-// unrated endpoint here isn't just a spam risk — it's a real money risk.
-// Keeping the limit tighter than the other endpoints on purpose.
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 10;
-const requestLog = new Map<string, number[]>();
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = (requestLog.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  timestamps.push(now);
-  requestLog.set(ip, timestamps);
-  return timestamps.length > RATE_LIMIT_MAX_REQUESTS;
-}
 
 function isValidSolanaAddress(address: unknown): address is string {
   if (typeof address !== "string") return false;
@@ -96,7 +82,8 @@ function fallbackAnswer(question: string, summary: Awaited<ReturnType<typeof get
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (isRateLimited(ip)) {
+  // This endpoint calls a paid AI API on every request, so its limit is deliberately tighter than the others.
+  if (await isRateLimited("copilot", ip, { max: 10, windowMs: 60_000 })) {
     return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });
   }
 

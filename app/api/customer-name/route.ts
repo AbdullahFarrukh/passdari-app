@@ -2,25 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
 import { setCustomerName, getCustomerNames } from "@/lib/db";
 import { verifyDisplayName } from "@/lib/nameAuth";
+import { isRateLimited } from "@/lib/rateLimit";
 
 const MAX_NAME_LENGTH = 50;
 const MAX_ADDRESSES_PER_LOOKUP = 100;
-
-// Simple per-IP rate limit — same reasoning as the relay endpoint: this
-// stops naive spam/scripted abuse, not a determined attacker rotating
-// IPs. Kept separate from the relay endpoint's limiter since they guard
-// unrelated things.
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 20;
-const requestLog = new Map<string, number[]>();
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = (requestLog.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  timestamps.push(now);
-  requestLog.set(ip, timestamps);
-  return timestamps.length > RATE_LIMIT_MAX_REQUESTS;
-}
 
 function isValidSolanaAddress(address: unknown): address is string {
   if (typeof address !== "string") return false;
@@ -34,7 +19,7 @@ function isValidSolanaAddress(address: unknown): address is string {
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (isRateLimited(ip)) {
+  if (await isRateLimited("customer-name-write", ip, { max: 20, windowMs: 60_000 })) {
     return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });
   }
 
@@ -85,6 +70,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (await isRateLimited("customer-name-read", ip, { max: 60, windowMs: 60_000 })) {
+    return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });
+  }
+
   const addressesParam = request.nextUrl.searchParams.get("addresses");
   if (!addressesParam) {
     return NextResponse.json({ error: "addresses query param is required" }, { status: 400 });

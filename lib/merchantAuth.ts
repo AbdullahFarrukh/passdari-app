@@ -2,7 +2,14 @@ import { Keypair } from "@solana/web3.js";
 import * as bip39 from "bip39";
 import { derivePath } from "ed25519-hd-key";
 
-async function deriveEncryptionKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+// New accounts use 600,000 iterations (current OWASP guidance for PBKDF2-SHA256). Accounts created before
+// this was raised have no `iterations` stored with them and were encrypted with 100,000, so they still
+// decrypt with that count.
+const PBKDF2_ITERATIONS = 600_000;
+const LEGACY_PBKDF2_ITERATIONS = 100_000;
+export const MIN_PASSWORD_LENGTH = 8;
+
+async function deriveEncryptionKey(password: string, salt: Uint8Array, iterations: number): Promise<CryptoKey> {
   const passwordKey = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(password),
@@ -11,7 +18,7 @@ async function deriveEncryptionKey(password: string, salt: Uint8Array): Promise<
     ["deriveKey"]
   );
     return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: salt as BufferSource, iterations: 100000, hash: "SHA-256" },
+    { name: "PBKDF2", salt: salt as BufferSource, iterations, hash: "SHA-256" },
     passwordKey,
     { name: "AES-GCM", length: 256 },
     false,
@@ -28,7 +35,7 @@ function keypairFromMnemonic(mnemonic: string): Keypair {
 async function storeMnemonic(username: string, mnemonic: string, password: string) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveEncryptionKey(password, salt);
+  const key = await deriveEncryptionKey(password, salt, PBKDF2_ITERATIONS);
   const encrypted = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv },
     key,
@@ -40,6 +47,7 @@ async function storeMnemonic(username: string, mnemonic: string, password: strin
     JSON.stringify({
       salt: Array.from(salt),
       iv: Array.from(iv),
+      iterations: PBKDF2_ITERATIONS,
       encrypted: Array.from(new Uint8Array(encrypted)),
     })
   );
@@ -51,6 +59,9 @@ export async function signUp(
 ): Promise<{ keypair: Keypair; mnemonic: string }> {
   if (!username || !password) {
     throw new Error("Please enter a username and password.");
+  }
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(`Please choose a password of at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
   if (localStorage.getItem(`merchant:${username}`)) {
     throw new Error("That username is already taken on this device.");
@@ -67,8 +78,8 @@ export async function signIn(username: string, password: string): Promise<Keypai
   const raw = localStorage.getItem(`merchant:${username}`);
   if (!raw) throw new Error("No merchant account found with that username on this device.");
 
-  const { salt, iv, encrypted } = JSON.parse(raw);
-  const key = await deriveEncryptionKey(password, new Uint8Array(salt));
+  const { salt, iv, encrypted, iterations } = JSON.parse(raw);
+  const key = await deriveEncryptionKey(password, new Uint8Array(salt), iterations ?? LEGACY_PBKDF2_ITERATIONS);
 
   const decrypted = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: new Uint8Array(iv) },
@@ -91,6 +102,9 @@ export async function recoverAccount(
   }
   if (!newPassword) {
     throw new Error("Please choose a new password.");
+  }
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(`Please choose a password of at least ${MIN_PASSWORD_LENGTH} characters.`);
   }
 
   const trimmed = mnemonic.trim().toLowerCase();

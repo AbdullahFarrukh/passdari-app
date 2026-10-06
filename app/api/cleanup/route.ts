@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { findStaleRent, runCleanup } from "@/lib/cleanup";
+import { isRateLimited } from "@/lib/rateLimit";
 
 // Sweeps up rent nobody is coming back for: expired, unclaimed receipts; vouchers nobody redeemed within
 // 90 days; and card NFTs nobody has stamped in 90 days. See lib/cleanup.ts for why none of this needs the
@@ -15,20 +16,8 @@ const connection = new Connection(process.env.HELIUS_RPC_URL ?? "https://api.dev
 const relayerSecretKey = JSON.parse(process.env.RELAYER_SECRET_KEY!);
 const relayer = Keypair.fromSecretKey(new Uint8Array(relayerSecretKey));
 
-// Simple in-memory rate limit, the same shape as /api/relay's — a naive script hammering the count or the
-// button is the realistic threat here, not a determined attacker: closing someone else's stale account
-// only ever sends that account's own rent back to whoever already owns it, so there is nothing to gain by
-// abusing this beyond wasting a few of the relayer's transaction fees.
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 15;
-const requestLog = new Map<string, number[]>();
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = (requestLog.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  timestamps.push(now);
-  requestLog.set(ip, timestamps);
-  return timestamps.length > RATE_LIMIT_MAX_REQUESTS;
-}
+// Closing someone else's stale account only ever sends that account's rent back to whoever already owns
+// it, so the limit only has to keep this from being used to burn the relayer's transaction fees.
 
 function parseBusiness(value: string | null): PublicKey | undefined {
   if (!value) return undefined;
@@ -57,7 +46,7 @@ export async function GET(request: NextRequest) {
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (isRateLimited(ip)) {
+  if (await isRateLimited("cleanup", ip, { max: 15, windowMs: 60_000 })) {
     return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });
   }
 
@@ -76,7 +65,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (isRateLimited(ip)) {
+  if (await isRateLimited("cleanup", ip, { max: 15, windowMs: 60_000 })) {
     return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Connection, Keypair, Transaction } from "@solana/web3.js";
 import nacl from "tweetnacl";
+import { isRateLimited } from "@/lib/rateLimit";
 
 const connection = new Connection(process.env.HELIUS_RPC_URL ?? "https://api.devnet.solana.com");
 
@@ -21,27 +22,9 @@ const relayer = Keypair.fromSecretKey(new Uint8Array(relayerSecretKey));
 // breaks by rejecting anything else.
 const LOYALTY_PROGRAM_ID = "HWvvvwSEounpNXcbD4JUNmniB5YxTcFNYoAestzJJCuL";
 
-// Very simple in-memory rate limit: a handful of relays per minute per IP.
-// This resets whenever the serverless function cold-starts, so it's not a
-// hard guarantee on Vercel — but it stops a naive script from hammering
-// the endpoint, which is the realistic threat here, not a determined
-// attacker rotating IPs (that needs a real store like Upstash/Redis, noted
-// as follow-up work).
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 15;
-const requestLog = new Map<string, number[]>();
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = (requestLog.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-  timestamps.push(now);
-  requestLog.set(ip, timestamps);
-  return timestamps.length > RATE_LIMIT_MAX_REQUESTS;
-}
-
 export async function POST(request: NextRequest) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (isRateLimited(ip)) {
+  if (await isRateLimited("relay", ip, { max: 15, windowMs: 60_000 })) {
     return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });
   }
 

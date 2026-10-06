@@ -4,6 +4,7 @@ import { PublicKey } from "@solana/web3.js";
 import { getBusinessAnalytics } from "@/lib/analytics";
 import { verifyCopilotRequest } from "@/lib/copilotAuth";
 import { isRateLimited } from "@/lib/rateLimit";
+import { rejectCrossSite } from "@/lib/sameOrigin";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -81,6 +82,8 @@ function fallbackAnswer(question: string, summary: Awaited<ReturnType<typeof get
 }
 
 export async function POST(request: NextRequest) {
+  const blocked = rejectCrossSite(request);
+  if (blocked) return blocked;
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   // This endpoint calls a paid AI API on every request, so its limit is deliberately tighter than the others.
   if (await isRateLimited("copilot", ip, { max: 10, windowMs: 60_000 })) {

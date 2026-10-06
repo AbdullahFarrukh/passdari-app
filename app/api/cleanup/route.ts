@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { findStaleRent, runCleanup } from "@/lib/cleanup";
 import { isRateLimited } from "@/lib/rateLimit";
+import { rejectCrossSite } from "@/lib/sameOrigin";
 
 // Sweeps up rent nobody is coming back for: expired, unclaimed receipts; vouchers nobody redeemed within
 // 90 days; and card NFTs nobody has stamped in 90 days. See lib/cleanup.ts for why none of this needs the
@@ -64,6 +65,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const blocked = rejectCrossSite(request);
+  if (blocked) return blocked;
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   if (await isRateLimited("cleanup", ip, { max: 15, windowMs: 60_000 })) {
     return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });

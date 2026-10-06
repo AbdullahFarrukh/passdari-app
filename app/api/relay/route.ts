@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Connection, Keypair, Transaction } from "@solana/web3.js";
 import nacl from "tweetnacl";
 import { isRateLimited } from "@/lib/rateLimit";
+import { rejectCrossSite } from "@/lib/sameOrigin";
 
 const connection = new Connection(process.env.HELIUS_RPC_URL ?? "https://api.devnet.solana.com");
 
@@ -23,6 +24,8 @@ const relayer = Keypair.fromSecretKey(new Uint8Array(relayerSecretKey));
 const LOYALTY_PROGRAM_ID = "HWvvvwSEounpNXcbD4JUNmniB5YxTcFNYoAestzJJCuL";
 
 export async function POST(request: NextRequest) {
+  const blocked = rejectCrossSite(request);
+  if (blocked) return blocked;
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   if (await isRateLimited("relay", ip, { max: 15, windowMs: 60_000 })) {
     return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });

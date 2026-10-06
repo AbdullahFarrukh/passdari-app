@@ -3,6 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import { setCustomerName, getCustomerNames } from "@/lib/db";
 import { verifyDisplayName } from "@/lib/nameAuth";
 import { isRateLimited } from "@/lib/rateLimit";
+import { rejectCrossSite } from "@/lib/sameOrigin";
 
 const MAX_NAME_LENGTH = 50;
 const MAX_ADDRESSES_PER_LOOKUP = 100;
@@ -18,6 +19,8 @@ function isValidSolanaAddress(address: unknown): address is string {
 }
 
 export async function POST(request: NextRequest) {
+  const blocked = rejectCrossSite(request);
+  if (blocked) return blocked;
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   if (await isRateLimited("customer-name-write", ip, { max: 20, windowMs: 60_000 })) {
     return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });

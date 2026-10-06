@@ -46,7 +46,7 @@ to `localnet` or `mainnet-beta` to change them (`lib/explorer.ts`).
 - `bip39` + `ed25519-hd-key` for both merchant and customer key generation, and `tweetnacl` for signing requests to the copilot and the names endpoint
 - `react-zxing` for the camera QR scanner, with manual code entry as a mandatory fallback
 - `@google/genai` (Gemini) for the AI copilot, with three fixed, clickable questions and a real, honest fallback (plain-templated real data, clearly labeled) if the live AI call fails
-- Upstash Redis (`@upstash/redis`) for one small list: customer display names
+- Upstash Redis (`@upstash/redis`) for the customer display names and the shared rate-limit counters
 - "Bill": a fluorescent-yellow counter, black ink and white receipt paper, with stamp blue and alert red as the only two accents — Big Shoulders for headings and buttons, Martian Mono for data and labels, Figtree for body text. Cards and tickets are printed as receipts (torn top and bottom edge, dotted-leader rows) via `components/ui/Receipt.tsx` and `ReceiptRow.tsx`; the design tokens are in `app/globals.css` and the rest of the shared pieces (buttons, address chips, stamp cards) are in `components/ui/`
 
 ## Running locally
@@ -63,7 +63,7 @@ Create `.env.local`:
 | `HELIUS_RPC_URL` | The Solana RPC address the server uses (relay and copilot data) | Recommended; falls back to the public devnet endpoint, which is slow and unreliable |
 | `NEXT_PUBLIC_HELIUS_RPC_URL` | The same, for the browser | Same |
 | `RELAYER_SECRET_KEY` | The relayer's secret key, as a JSON array of its 64 bytes (the contents of a `solana-keygen` file). Never commit it | Yes |
-| `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (or Vercel's `KV_REST_API_URL` and `KV_REST_API_TOKEN`) | The store for customer display names | Optional. Without them names are kept in memory and disappear when the dev server restarts. A production build refuses to save a name instead, with a clear error |
+| `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (or Vercel's `KV_REST_API_URL` and `KV_REST_API_TOKEN`) | The store for customer display names and the shared rate-limit counts | Optional. Without them names are kept in memory and disappear when the dev server restarts, and rate limits are only per instance. A production build refuses to save a name instead, with a clear error |
 | `CRON_SECRET` | Guards the daily clean-up sweep (see below); Vercel sets this as the request's bearer token automatically once the variable exists | Recommended in production; without it the sweep refuses to run rather than run unguarded |
 | `NEXT_PUBLIC_SOLANA_CLUSTER` | `devnet` (default), `localnet` or `mainnet-beta`, for the Explorer links | Optional |
 
@@ -141,11 +141,15 @@ customer's signature: only the relayer's, so this can run unattended.
 
 ## Security notes
 
+- **Cross-site writes are refused.** The endpoints that change state (relay, copilot, customer-name and cleanup POSTs) return 403 when the browser's `Origin` header names a different site. Requests with no `Origin` (the daily cron job, curl) pass through. CORS is not opened up anywhere, so other sites can't read any response either.
+- **Headers and CSP.** Every response carries a Content-Security-Policy limited to this site and its configured RPC endpoint, plus HSTS, `X-Frame-Options: DENY` (the app can't be framed), `nosniff`, a strict referrer policy, a Permissions-Policy that only allows the camera for the QR scanner, and `Cross-Origin-Opener-Policy: same-origin`. Scripts still allow `'unsafe-inline'` because Next.js needs it for its bootstrap code; a nonce-based policy would remove that (see `next.config.ts`).
 - **The relay endpoint** only co-signs a transaction if every instruction in it is a call into the Passdari program and the relayer is the fee payer. Payloads over 4,000 characters are refused, and each IP address gets 15 requests a minute.
 - **The copilot** hands out a business's customer data, and a business's address is public on-chain, so it needs proof of ownership. The merchant's browser signs each question with the merchant's wallet (over the owner, the exact question and the time), and the server checks it before doing anything expensive. A signature is good for two minutes either way, so an old copy is useless, and a copy replayed inside that window can only repeat the same question. 10 requests a minute per IP.
 - **Display names** are signed the same way (`lib/nameAuth.ts`, a five-minute window, with its own message prefix so a signature for one purpose can't be used for the other). 20 requests a minute per IP.
-- All of the limits above are kept in memory inside each serverless instance, so they reset on a cold start and aren't shared between instances. They stop a naive script, not a determined attacker.
-- Secrets (`RELAYER_SECRET_KEY`, the Gemini key, the store's token) live only in environment variables. `.env*` files are git-ignored.
+- **Rate limits are shared.** Every limit above is counted in Upstash Redis (`lib/rateLimit.ts`), so all serverless instances share one count. If the store can't be reached, the check falls back to a per-instance count instead of blocking every real user. Without any Upstash settings, the count is per instance only, which is weaker. The customer-names read endpoint allows 60 requests a minute.
+- **Passwords never reach the server.** The wallet key is encrypted in the browser with a key derived from the password using PBKDF2-SHA256. New accounts use 600,000 iterations and record that count with the account; accounts created earlier used 100,000 and still sign in with it. New passwords (sign-up and recovery) must be at least 8 characters. Existing sign-ins aren't checked against this, so nobody is locked out.
+- **Secrets** (`RELAYER_SECRET_KEY`, the Gemini key, `CRON_SECRET`, the store's token) live only in environment variables, never in the repo; the repo's full git history has been scanned and contains none of them. `.env*` files and the program's upgrade keypair are git-ignored. GitHub secret scanning and push protection are on for this repo.
+- **Dependencies:** `npm audit --omit=dev` reports no critical issues and no unfixed high issue that this app's code paths reach. The remaining moderate items come from `@solana/web3.js` and its transitive packages; the only fix is web3.js 3.x, a breaking major that the pinned Anchor 1.0 stack isn't built against yet. A high-severity advisory in Anchor's `toml` dependency only affects its CLI workspace code, which never parses untrusted input.
 
 ## Deploying
 
@@ -164,6 +168,8 @@ Set `CRON_SECRET` before or right after the first deploy, so the daily clean-up 
 - A customer can set their own display name to any text, and names are passed to the AI copilot. The worst this can do is change the wording of an answer only that merchant sees.
 - The voucher and card NFTs' metadata links point at small pages (`/v/<mint>`, `/c/<mint>`) that return a description and a picture (`public/nft/passdari-voucher.png`, `passdari-card.png`). It is one picture for all vouchers and one for all cards, with no business name on it, and this app serves it, so it depends on the app staying up. Ownership itself stays on-chain.
 - Lists refresh by checking every few seconds (the presented-voucher lists), not by subscription.
+- **Anyone can make a merchant account, and the relayer pays for it.** The relay will co-sign `register_business` for any wallet, and each business keeps its rent for good, so someone could create many businesses at the relayer's expense. The per-IP rate limit slows this down but doesn't stop it. Planned fix: only approved merchant wallets get relayed registrations, and the relayer gets a daily SOL budget cap. Until then, treat relayer spending as uncapped.
+- **The browser-side Helius RPC URL is public.** `NEXT_PUBLIC_HELIUS_RPC_URL` is compiled into the page, so its API key is visible to anyone who loads the site. It is a read-only RPC key and can't move funds, but someone could use up its quota. Replace it with a restricted key for the browser when there's time.
 
 ## The relayer's operational story
 

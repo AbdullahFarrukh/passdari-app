@@ -250,6 +250,33 @@ async function cashIn(shop, business, customer, card) {
   await send([ix], [relayer, customer.keypair], `cashing in for ${customer.name} at ${shop.name}`);
 }
 
+// Hands a voucher over the counter: the customer presents it, the shop redeems it, the NFT is burned.
+// Without this a shop's "rewards redeemed" stays at zero while its customers sit on vouchers they never
+// collected — true, but it reads as though nobody has ever actually had a free coffee.
+async function redeemOne(shop, business, customer, entry) {
+  const voucher = entry.publicKey;
+  const account = entry.account;
+  const mint = account.mint;
+  const holderToken = tokenAccountFor(customer.keypair.publicKey, mint);
+
+  const present = await program.methods.presentVoucher()
+    .accounts({ voucher, mint, holderToken, owner: customer.keypair.publicKey, tokenProgram: TOKEN_2022_PROGRAM_ID })
+    .instruction();
+  await send([present], [relayer, customer.keypair], `presenting a voucher at ${shop.name}`);
+
+  const redeem = await program.methods.redeemVoucher()
+    .accounts({
+      business, voucher, mint, holderToken,
+      authority: shop.keypair.publicKey,
+      relayer: relayer.publicKey,
+      rentPayer: account.rentPayer,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+    })
+    .instruction();
+  await send([redeem], [relayer, shop.keypair], `redeeming a voucher at ${shop.name}`);
+  return true;
+}
+
 // Names are shown on the public directory, so they are saved the same way the app saves them: signed by
 // the wallet itself. Written under both environment keys so they show up locally and on the live site.
 async function saveNames(people) {
@@ -389,6 +416,26 @@ async function saveNames(people) {
       }
     }
   }
+
+  // Hand roughly two thirds of the vouchers over the counter, and leave the rest in customers' hands —
+  // that is what a real shop looks like, and it means signing into a demo customer shows a live voucher.
+  // Read back from the chain rather than remembered, so this works on a resumed run too.
+  console.log("\nRedeeming some of the vouchers");
+  const byWallet = new Map(customers.map((c) => [c.keypair.publicKey.toBase58(), c]));
+  let redeemed = 0;
+  for (const shop of shops) {
+    const vouchers = await withRetries(`listing vouchers at ${shop.name}`, () =>
+      program.account.voucher.all([{ memcmp: { offset: 8, bytes: shop.business.toBase58() } }]));
+    const take = Math.floor(vouchers.length * 2 / 3);
+    for (const entry of vouchers.slice(0, take)) {
+      const customer = byWallet.get(entry.account.owner.toBase58());
+      if (!customer) continue; // a voucher that was gifted away — not ours to redeem
+      await redeemOne(shop, shop.business, customer, entry);
+      redeemed += 1;
+    }
+    console.log(`  ✓ ${shop.name}: ${take} of ${vouchers.length} vouchers collected`);
+  }
+  console.log(`  ${redeemed} rewards handed over in total`);
 
   const after = await connection.getBalance(relayer.publicKey);
   console.log(`\nRelayer spent ${((before - after) / 1e9).toFixed(4)} SOL. Balance now ${(after / 1e9).toFixed(4)} SOL.`);

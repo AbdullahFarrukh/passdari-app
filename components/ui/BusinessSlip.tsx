@@ -44,7 +44,10 @@ export function BusinessSlip({ business, rank, headingLevel = 3 }: {
         <ReceiptRow label="Stamps needed" value={stampsRequired} />
         <ReceiptRow label="Cards started" value={totalCards} />
         <ReceiptRow label="Stamps given" value={totalStampsIssued} />
-        <ReceiptRow label="Rewards given" value={totalRedemptions} />
+        {/* The shop's own counter only goes up when a voucher is actually handed over the counter, so
+            this is not the same as the number of cards customers have finished below — someone can be
+            holding a reward they haven't collected yet. "Given" read like it should match, and didn't. */}
+        <ReceiptRow label="Rewards redeemed" value={totalRedemptions} />
       </div>
 
       <div className="mt-4 border-t-2 border-line pt-3">

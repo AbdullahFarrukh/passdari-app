@@ -146,6 +146,92 @@ export type Loyalty = {
       ]
     },
     {
+      "name": "closeDeadCard",
+      "discriminator": [
+        3,
+        184,
+        113,
+        57,
+        123,
+        2,
+        22,
+        197
+      ],
+      "accounts": [
+        {
+          "name": "card",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "card.business",
+                "account": "loyaltyCard"
+              },
+              {
+                "kind": "account",
+                "path": "card.customer",
+                "account": "loyaltyCard"
+              }
+            ]
+          }
+        },
+        {
+          "name": "cardMint",
+          "docs": [
+            "the handler requires that nothing lives there."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  114,
+                  100,
+                  95,
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "card"
+              },
+              {
+                "kind": "account",
+                "path": "card.nft_cycle",
+                "account": "loyaltyCard"
+              }
+            ]
+          }
+        },
+        {
+          "name": "rentPayer",
+          "docs": [
+            "The wallet that paid for this card, recorded on it. Receives the rent back."
+          ],
+          "writable": true,
+          "relations": [
+            "card"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "closeExpiredVoucher",
       "discriminator": [
         142,
@@ -352,6 +438,62 @@ export type Loyalty = {
       ]
     },
     {
+      "name": "migrateCard",
+      "discriminator": [
+        81,
+        142,
+        179,
+        122,
+        50,
+        113,
+        84,
+        184
+      ],
+      "accounts": [
+        {
+          "name": "card",
+          "docs": [
+            "its discriminator, its seeds and its length are all checked by hand in the handler."
+          ],
+          "writable": true
+        },
+        {
+          "name": "record",
+          "docs": [
+            "Checked against the card's own cycle in the handler. May be empty."
+          ],
+          "writable": true
+        },
+        {
+          "name": "cardMint",
+          "docs": [
+            "handler against the card's own cycle."
+          ]
+        },
+        {
+          "name": "rentPayer",
+          "docs": [
+            "Receives the old record's rent. Must be the wallet that record names."
+          ],
+          "writable": true
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "Pays for the card's extra bytes, and becomes the card's recorded payer when no record survives",
+            "to say otherwise."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "mintCardNft",
       "discriminator": [
         234,
@@ -425,35 +567,6 @@ export type Loyalty = {
                 "kind": "account",
                 "path": "card.nft_cycle",
                 "account": "loyaltyCard"
-              }
-            ]
-          }
-        },
-        {
-          "name": "record",
-          "docs": [
-            "Records who paid for this NFT, so its rent goes back to exactly that",
-            "wallet when the NFT is burned."
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  97,
-                  114,
-                  100,
-                  95,
-                  110,
-                  102,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "mint"
               }
             ]
           }
@@ -712,35 +825,6 @@ export type Loyalty = {
             "missing if there is no NFT or the customer already closed it."
           ],
           "writable": true
-        },
-        {
-          "name": "cardNftRecord",
-          "docs": [
-            "by the NFT's mint; it may not exist (no NFT, or one made before records",
-            "existed), which the handler checks."
-          ],
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  97,
-                  114,
-                  100,
-                  95,
-                  110,
-                  102,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "cardMint"
-              }
-            ]
-          }
         },
         {
           "name": "cardRentPayer",
@@ -1088,9 +1172,6 @@ export type Loyalty = {
         },
         {
           "name": "cardMint",
-          "docs": [
-            "cycle, and its record (below) only exists if the NFT does."
-          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -1125,39 +1206,13 @@ export type Loyalty = {
           "writable": true
         },
         {
-          "name": "record",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  97,
-                  114,
-                  100,
-                  95,
-                  110,
-                  102,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "cardMint"
-              }
-            ]
-          }
-        },
-        {
           "name": "rentPayer",
           "docs": [
-            "The wallet that paid for the NFT, recorded in its record. Receives the",
-            "rent."
+            "The wallet that paid for the card and its NFT, recorded on the card. Receives the rent."
           ],
           "writable": true,
           "relations": [
-            "record"
+            "card"
           ]
         },
         {
@@ -1452,19 +1507,6 @@ export type Loyalty = {
       ]
     },
     {
-      "name": "cardNft",
-      "discriminator": [
-        234,
-        102,
-        146,
-        79,
-        206,
-        88,
-        37,
-        62
-      ]
-    },
-    {
       "name": "counter",
       "discriminator": [
         255,
@@ -1645,6 +1687,31 @@ export type Loyalty = {
       "code": 6019,
       "name": "tooManyStamps",
       "msg": "That card cannot hold any more stamps"
+    },
+    {
+      "code": 6020,
+      "name": "cardNotEmpty",
+      "msg": "This card still has stamps on it"
+    },
+    {
+      "code": 6021,
+      "name": "cardNotDead",
+      "msg": "This card has had a stamp in the last year"
+    },
+    {
+      "code": 6022,
+      "name": "cardNftStillAlive",
+      "msg": "This card still has an NFT; recycle that first"
+    },
+    {
+      "code": 6023,
+      "name": "notACard",
+      "msg": "This account is not a loyalty card"
+    },
+    {
+      "code": 6024,
+      "name": "cardAlreadyMigrated",
+      "msg": "This card has already been migrated"
     }
   ],
   "types": [
@@ -1708,28 +1775,6 @@ export type Loyalty = {
           {
             "name": "totalRedemptions",
             "type": "u32"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "cardNft",
-      "docs": [
-        "Who paid for a card NFT (its mint, the customer's token account and this",
-        "record), so that rent goes back to exactly that wallet when the NFT is",
-        "burned: at cash-in, or once the card has gone 90 days without a stamp.",
-        "Lives at `[\"card_nft\", mint]` and is closed together with the NFT."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "rentPayer",
-            "type": "pubkey"
           },
           {
             "name": "bump",
@@ -1808,6 +1853,19 @@ export type Loyalty = {
           {
             "name": "bump",
             "type": "u8"
+          },
+          {
+            "name": "rentPayer",
+            "docs": [
+              "Whoever paid the rent for this card and for its NFT (the relayer, when the app made it). Every",
+              "lamport of that rent goes back to exactly this wallet: the NFT's when the card is cashed in or",
+              "goes idle, and the card's own when a dead card is closed.",
+              "",
+              "This used to live in a separate `CardNft` account, one per NFT. That account held 32 useful bytes",
+              "and cost 858,520 lamports, three quarters of which was the fixed price of being an account at all.",
+              "Keeping the same field here instead costs 162,560 and saves the rest."
+            ],
+            "type": "pubkey"
           }
         ]
       }

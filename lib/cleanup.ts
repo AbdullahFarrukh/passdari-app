@@ -112,10 +112,10 @@ export async function runCleanup(connection: Connection, relayer: Keypair, scope
   const cardIxs: TransactionInstruction[] = [];
   for (const c of idleCards) {
     const mint = cardMintPda(programId, c.publicKey, c.account.nftCycle as number);
-    const record = PublicKey.findProgramAddressSync([Buffer.from("card_nft"), mint.toBuffer()], programId)[0];
-    const recordInfo = await connection.getAccountInfo(record);
-    if (!recordInfo) continue; // no record: an NFT from before records existed, left for cash-in to handle
-    const rentPayer = program.coder.accounts.decode("CardNft", recordInfo.data).rentPayer as PublicKey;
+    // The card itself says who paid for its NFT. A card made before that field existed has it blank;
+    // there is nothing on chain to say where its rent should go, so leave it for cash-in to handle.
+    const rentPayer = c.account.rentPayer as PublicKey;
+    if (!rentPayer || rentPayer.equals(PublicKey.default)) continue;
     cardIxs.push(
       await relayerProgram.methods
         .retireIdleCardNft()
@@ -124,7 +124,6 @@ export async function runCleanup(connection: Connection, relayer: Keypair, scope
           customer: c.account.customer,
           cardMint: mint,
           cardToken: tokenAccountFor(c.account.customer as PublicKey, mint),
-          record,
           rentPayer,
           tokenProgram: TOKEN_2022_PROGRAM_ID,
         } as any)

@@ -21,18 +21,23 @@ export function cardMintPda(programId: PublicKey, card: PublicKey, cycle: number
   return mint;
 }
 
-// Records who paid for a given cycle's NFT, at ["card_nft", mint]. Rent from the NFT goes back to exactly
-// this wallet — when the card is cashed in, or when the NFT is recycled after 90 days with no stamp.
+// The OLD per-NFT rent record, at ["card_nft", mint]. Nothing creates these any more — the card itself
+// carries its payer now, for a fifth of the rent. Kept only so the one-off migration can find the
+// records already on chain and hand their rent back.
 export function cardNftRecordPda(programId: PublicKey, mint: PublicKey): PublicKey {
   const [record] = PublicKey.findProgramAddressSync([Buffer.from("card_nft"), mint.toBuffer()], programId);
   return record;
 }
 
-// The link stored inside the NFT, pointing at this app's own small page that describes it
-// (see app/c/[mint]/route.ts). Too long to fit? Mint without one: the name and symbol are stored
-// on-chain either way.
-export function cardMetadataUri(mint: PublicKey, appOrigin: string): string {
-  const uri = `${appOrigin}/c/${mint.toBase58()}`;
+// The link stored inside the NFT, pointing at this app's own page describing what a stamp card is
+// (app/c/route.ts).
+//
+// It used to carry the mint address — `/c/<44 characters>` — which made it 78 bytes. That metadata is
+// stored inside the mint account and every byte of it is paid for in rent, and the only thing the
+// per-mint page added was the mint address back again, which any wallet reading the metadata already
+// has. One shared link costs 45 fewer bytes on every card.
+export function cardMetadataUri(appOrigin: string): string {
+  const uri = `${appOrigin}/c`;
   return uri.length <= MAX_CARD_URI_LENGTH ? uri : "";
 }
 

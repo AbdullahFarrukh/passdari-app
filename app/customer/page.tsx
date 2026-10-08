@@ -7,7 +7,7 @@ import { saveSession, loadSession, clearSession } from "@/lib/session";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
 import { saveDisplayName } from "@/lib/displayName";
-import { cardMetadataUri, cardMintExists, cardMintPda, cardNftRecordPda } from "@/lib/cardNft";
+import { cardMetadataUri, cardMintExists, cardMintPda } from "@/lib/cardNft";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, tokenAccountFor } from "@/lib/vouchers";
 import { MyCards } from "@/components/MyCards";
 import { MyVouchers } from "@/components/MyVouchers";
@@ -261,12 +261,11 @@ export default function CustomerPage() {
 
       if (needsCardNft) {
         const mintCardNft = await program.methods
-          .mintCardNft(cardMetadataUri(cardMint, window.location.origin))
+          .mintCardNft(cardMetadataUri(window.location.origin))
           .accounts({
             business: businessPda,
             card: cardPda,
             mint: cardMint,
-            record: cardNftRecordPda(program.programId, cardMint),
             customerToken: tokenAccountFor(keypair.publicKey, cardMint),
             customer: keypair.publicKey,
             relayer: RELAYER_PUBLIC_KEY,

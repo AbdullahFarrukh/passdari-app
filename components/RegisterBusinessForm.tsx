@@ -10,6 +10,21 @@ import { Receipt } from "@/components/ui/Receipt";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
+// A fixed list, because the category is what the public directory groups shops by. When this was a free
+// text box, one kind of shop ended up spread across "FastFood", "FastFoods", "Fast food" and "FF", and a
+// customer browsing for it found a quarter of the shops each time.
+const CATEGORIES = [
+  "Cafe",
+  "Restaurant",
+  "Fast food",
+  "Bakery",
+  "Grocery",
+  "Pharmacy",
+  "Salon",
+  "Clothing",
+  "Other",
+];
+
 const WHAT_REGISTERING_DOES = [
   { title: "A permanent address", text: "Your business account has a fixed address derived from your wallet. Customers' cards point to it." },
   { title: "You stay in control", text: "Only your wallet can issue receipts and redeem vouchers. The rules you set here are stored on-chain." },
@@ -97,7 +112,10 @@ export function RegisterBusinessForm({ keypair, onDone }: { keypair: Keypair; on
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="biz-category" className="eyebrow">Category</label>
-            <input id="biz-category" className="field" placeholder="e.g. cafe" value={category} onChange={(e) => setCategory(e.target.value)} required />
+            <select id="biz-category" className="field" value={category} onChange={(e) => setCategory(e.target.value)} required>
+              <option value="" disabled>Choose a category</option>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="biz-reward" className="eyebrow">Reward label</label>

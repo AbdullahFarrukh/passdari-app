@@ -5,10 +5,17 @@ import { KeyMark } from "@/components/ui/KeyMark";
 import { OnChainId } from "@/components/ui/OnChainId";
 import { Receipt } from "@/components/ui/Receipt";
 import { WalletExplainer } from "@/components/WalletExplainer";
+import { WalletGraduation } from "@/components/WalletGraduation";
 
 // Who is signed in: a picture made from the wallet address, the username, the address (copyable, with an
-// Explorer link) and sign out. "About your wallet" explains what that address really is.
-export function AccountBar({ username, address, onSignOut }: { username: string; address: string; onSignOut: () => void }) {
+// Explorer link) and sign out. "About your wallet" explains what that address really is, and "Take this
+// wallet with you" is how someone moves it into a wallet app of their own. Both stay shut until asked for.
+export function AccountBar({ username, address, accountKind, onSignOut }: {
+  username: string;
+  address: string;
+  accountKind: "customer" | "merchant";
+  onSignOut: () => void;
+}) {
   return (
     <div className="w-full max-w-6xl">
       <Receipt className="p-4 sm:p-5">
@@ -27,6 +34,7 @@ export function AccountBar({ username, address, onSignOut }: { username: string;
         </summary>
         <div className="mt-3"><WalletExplainer heading="This is a real Solana wallet, and only you hold the key" /></div>
       </details>
+      <WalletGraduation username={username} address={address} accountKind={accountKind} />
     </div>
   );
 }

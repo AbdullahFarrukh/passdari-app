@@ -74,7 +74,7 @@ export async function signUp(
   return { keypair, mnemonic };
 }
 
-export async function signIn(username: string, password: string): Promise<Keypair> {
+async function decryptMnemonic(username: string, password: string): Promise<string> {
   const raw = localStorage.getItem(`customer:${username}`);
   if (!raw) throw new Error("No account found with that username on this device.");
 
@@ -87,8 +87,18 @@ export async function signIn(username: string, password: string): Promise<Keypai
     new Uint8Array(encrypted)
   );
 
-  const mnemonic = new TextDecoder().decode(decrypted);
-  return keypairFromMnemonic(mnemonic);
+  return new TextDecoder().decode(decrypted);
+}
+
+export async function signIn(username: string, password: string): Promise<Keypair> {
+  return keypairFromMnemonic(await decryptMnemonic(username, password));
+}
+
+// Shows the 12 words again to someone already signed in, so they can open this same wallet in Phantom,
+// Solflare or any other Solana wallet. The password is asked for a second time on purpose: being signed
+// in is not enough to reveal the one secret that hands over the whole wallet.
+export async function revealMnemonic(username: string, password: string): Promise<string> {
+  return decryptMnemonic(username, password);
 }
 
 export async function recoverAccount(

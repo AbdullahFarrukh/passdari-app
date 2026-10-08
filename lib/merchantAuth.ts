@@ -74,7 +74,7 @@ export async function signUp(
   return { keypair, mnemonic };
 }
 
-export async function signIn(username: string, password: string): Promise<Keypair> {
+async function decryptMnemonic(username: string, password: string): Promise<string> {
   const raw = localStorage.getItem(`merchant:${username}`);
   if (!raw) throw new Error("No merchant account found with that username on this device.");
 
@@ -87,8 +87,17 @@ export async function signIn(username: string, password: string): Promise<Keypai
     new Uint8Array(encrypted)
   );
 
-  const mnemonic = new TextDecoder().decode(decrypted);
-  return keypairFromMnemonic(mnemonic);
+  return new TextDecoder().decode(decrypted);
+}
+
+export async function signIn(username: string, password: string): Promise<Keypair> {
+  return keypairFromMnemonic(await decryptMnemonic(username, password));
+}
+
+// See the note on the customer version in lib/customerAuth.ts: the password is asked for again on
+// purpose before the 12 words are shown.
+export async function revealMnemonic(username: string, password: string): Promise<string> {
+  return decryptMnemonic(username, password);
 }
 
 

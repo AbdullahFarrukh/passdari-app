@@ -7,6 +7,13 @@ import { ReceiptRow } from "@/components/ui/ReceiptRow";
 import { LoyaltyCardReceipt } from "@/components/ui/LoyaltyCardReceipt";
 import { Barcode, BARCODE_B } from "@/components/ui/Barcode";
 import { ArrowRightIcon } from "@/components/ui/icons";
+import { BusinessSlip } from "@/components/ui/BusinessSlip";
+import { getDirectorySafely, categoriesOf } from "@/lib/directory";
+
+// The directory is read from the chain, so the page is rebuilt on a timer rather than on every visit:
+// fresh enough that a shop appears within a couple of minutes of registering, cheap enough that a busy
+// day doesn't turn into one RPC round trip per visitor.
+export const revalidate = 120;
 
 const STEPS = [
   { n: "1", label: "Receipt", status: "Issued", text: "The merchant issues a one-time receipt as an account on Solana. It expires if nobody claims it." },
@@ -61,6 +68,83 @@ function HowItWorksReceipt() {
   );
 }
 
+// The shops that are actually being used, with the people using them most. Nothing here is written by us:
+// the counts are the shops' own on-chain accounts, which is what makes them worth printing.
+async function Directory() {
+  const businesses = await getDirectorySafely();
+  if (businesses.length === 0) return null;
+
+  const top = businesses.slice(0, 10);
+  const categories = categoriesOf(businesses);
+  const rest = businesses.length - top.length;
+
+  // Search engines read this; people read the slips below. Same numbers in both.
+  const listing = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Shops on Passdari",
+    numberOfItems: businesses.length,
+    itemListElement: top.map((b, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      item: {
+        "@type": "LocalBusiness",
+        name: b.name,
+        identifier: b.address,
+        makesOffer: { "@type": "Offer", name: b.rewardLabel },
+      },
+    })),
+  };
+
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-14 lg:py-16" aria-labelledby="directory">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(listing) }} />
+
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="font-mono text-[10.5px] uppercase tracking-[.14em] text-muted">Registered shops</p>
+          <h2 id="directory" className="mt-1 text-balance text-[clamp(2rem,5vw,4rem)] font-extrabold uppercase leading-[0.98] text-ink">
+            Where people are collecting
+          </h2>
+          <p className="mt-3 max-w-xl text-base text-ink">
+            Every shop below registered itself on Passdari. The stamps, rewards and customers are counted
+            on Solana, so you can check any of these numbers yourself.
+          </p>
+        </div>
+        <Link href="/businesses" className="inline-flex min-h-11 items-center gap-2 rounded-full border-[2.5px] border-ink px-5 font-display text-sm font-extrabold uppercase tracking-wide text-ink hover:bg-ink hover:text-paper">
+          Search all shops <ArrowRightIcon size={16} />
+        </Link>
+      </div>
+
+      {categories.length > 1 && (
+        <nav className="mt-6 flex flex-wrap gap-2" aria-label="Shop categories">
+          {categories.map((c) => (
+            <Link key={c.slug} href={`/businesses/${c.slug}`}
+              className="inline-flex items-center gap-1.5 rounded-[10px] border-2 border-line bg-surface px-3 py-1.5 font-mono text-xs uppercase tracking-wide text-ink hover:border-ink">
+              {c.name} <span className="text-muted">{c.count}</span>
+            </Link>
+          ))}
+        </nav>
+      )}
+
+      <ul className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {top.map((b, i) => (
+          <li key={b.address}><BusinessSlip business={b} rank={i + 1} /></li>
+        ))}
+      </ul>
+
+      {rest > 0 && (
+        <p className="mt-6 text-sm text-ink">
+          <Link href="/businesses" className="font-bold underline underline-offset-4">
+            {rest} more {rest === 1 ? "shop" : "shops"}
+          </Link>{" "}
+          — search by name or pick a category above.
+        </p>
+      )}
+    </section>
+  );
+}
+
 export default function HomePage() {
   return (
     <div>
@@ -88,6 +172,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <Directory />
 
       <section className="mx-auto max-w-6xl px-4 py-14 lg:py-16" aria-labelledby="how-it-works">
         <div className="grid gap-10 lg:grid-cols-[0.7fr_1.3fr] lg:items-start lg:gap-14">

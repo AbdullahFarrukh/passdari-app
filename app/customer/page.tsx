@@ -296,7 +296,7 @@ export default function CustomerPage() {
       {keypair && <h1 className="sr-only">Your stamp cards and vouchers</h1>}
 
       {keypair && (
-        <AccountBar username={username} address={keypair.publicKey.toBase58()} onSignOut={handleSignOut} />
+        <AccountBar username={username} address={keypair.publicKey.toBase58()} accountKind="customer" onSignOut={handleSignOut} />
       )}
 
       {newMnemonic && <MnemonicNotice phrase={newMnemonic} onDismiss={() => setNewMnemonic(null)} />}

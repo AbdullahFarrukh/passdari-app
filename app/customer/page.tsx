@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Connection, Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { signUp, signIn, recoverAccount } from "@/lib/customerAuth";
+import { saveSession, loadSession, clearSession } from "@/lib/session";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
 import { saveDisplayName } from "@/lib/displayName";
@@ -55,6 +56,28 @@ export default function CustomerPage() {
 
   const program = useCustomerProgram(keypair);
 
+  // Pick the session back up after a reload. This runs in an effect rather than in the initial state so
+  // the server-rendered markup and the first client render still match.
+  useEffect(() => {
+    const session = loadSession("customer");
+    if (session) {
+      setKeypair(session.keypair);
+      setUsername(session.username);
+    }
+  }, []);
+
+  // Cards and vouchers can change without this person doing anything — a friend sends them stamps, or a
+  // merchant redeems the voucher they just presented. Bumping the refresh key on a timer is what the
+  // merchant page already does; everything here already reacts to it. Paused while the tab is in the
+  // background so an forgotten tab isn't quietly spending the app's RPC budget all day.
+  useEffect(() => {
+    if (!keypair) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") setRefreshKey((k) => k + 1);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [keypair]);
+
   async function handleSignUp() {
     setAuthError(null);
     setKeypair(null);
@@ -63,6 +86,7 @@ export default function CustomerPage() {
       const { keypair: kp, mnemonic } = await signUp(username, password);
       setKeypair(kp);
       setNewMnemonic(mnemonic);
+      saveSession("customer", username, kp);
 
       // Signed with the new wallet's own key, so only its owner can set its name.
       saveDisplayName(kp, username);
@@ -78,6 +102,7 @@ export default function CustomerPage() {
     try {
       const kp = await signIn(username, password);
       setKeypair(kp);
+      saveSession("customer", username, kp);
       // Customers who signed up before names could be saved get one now. This
       // only fills in a missing name, it never replaces one that is there.
       saveDisplayName(kp, username, { onlyIfMissing: true });
@@ -92,6 +117,7 @@ export default function CustomerPage() {
     try {
       const kp = await recoverAccount(recoveryUsername, recoveryPhrase, recoveryPassword);
       setKeypair(kp);
+      saveSession("customer", recoveryUsername, kp);
       saveDisplayName(kp, recoveryUsername, { onlyIfMissing: true });
       setUsername(recoveryUsername);
       setShowRecovery(false);
@@ -105,6 +131,7 @@ export default function CustomerPage() {
   }
 
   function handleSignOut() {
+    clearSession("customer");
     setKeypair(null);
     setUsername("");
     setPassword("");

@@ -47,10 +47,10 @@ export function MyVouchers({
 }) {
   const program = useCustomerProgram(keypair);
   const [vouchers, setVouchers] = useState<VoucherEntry[] | null>(null);
+  const [tick, setTick] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [giftAddress, setGiftAddress] = useState<Record<string, string>>({});
-  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     if (!program) return;

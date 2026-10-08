@@ -51,8 +51,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Too many requests — please slow down." }, { status: 429 });
   }
 
+  // A bad address is the caller's fault and deserves a 400. Anything that goes wrong after that is a
+  // problem reaching the chain, which is ours. Lumping both together reported a transient RPC failure as
+  // "Bad Request", which sent me hunting for a malformed address that was perfectly valid — and the old
+  // catch logged nothing at all to set me straight.
+  let business: PublicKey;
   try {
-    const business = parseBusiness(businessParam)!;
+    business = parseBusiness(businessParam)!;
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "That doesn't look like a business address." },
+      { status: 400 }
+    );
+  }
+
+  try {
     const { staleReceipts, staleVouchers, idleCards } = await findStaleRent(connection, { business });
     return NextResponse.json({
       receipts: { found: staleReceipts.length },
@@ -60,7 +73,8 @@ export async function GET(request: NextRequest) {
       cardNfts: { found: idleCards.length },
     });
   } catch (err) {
-    return NextResponse.json({ error: err instanceof Error ? err.message : "Something went wrong" }, { status: 400 });
+    console.error("Could not count stale rent for a business:", err);
+    return NextResponse.json({ error: "Couldn't reach the network just now — please try again." }, { status: 502 });
   }
 }
 

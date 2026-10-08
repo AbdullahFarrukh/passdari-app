@@ -25,7 +25,7 @@ type Recipient =
   | { state: "bad-address" }
   | { state: "self" }
   | { state: "no-card" }
-  | { state: "ready"; card: PublicKey; name: string | null; stamps: number };
+  | { state: "ready"; card: PublicKey; name: string | null; stamps: number; needs: number };
 
 export function TransferStamps({
   program,
@@ -99,7 +99,17 @@ export function TransferStamps({
         }
 
         if (!cancelled) {
-          setRecipient({ state: "ready", card: theirCard, name, stamps: card.stamps as number });
+          // How many more they need to finish the card they are on. Their own required count, not this
+          // card's: a shop can change its terms, and each card keeps the terms it was started under.
+          const theirStamps = card.stamps as number;
+          const theirTarget = card.stampsRequiredSnapshot as number;
+          setRecipient({
+            state: "ready",
+            card: theirCard,
+            name,
+            stamps: theirStamps,
+            needs: Math.max(0, theirTarget - theirStamps),
+          });
         }
       } catch (err) {
         console.error("Could not look up that card:", err);
@@ -208,10 +218,31 @@ export function TransferStamps({
           {recipient.state === "ready" && (
             <span className="font-medium text-ink">
               {recipient.name ?? shortAddress(recipientInput.trim())} has a card here with {recipient.stamps}{" "}
-              {recipient.stamps === 1 ? "stamp" : "stamps"}.
+              {recipient.stamps === 1 ? "stamp" : "stamps"}
+              {recipient.needs > 0 && <> — {recipient.needs} more {recipient.needs === 1 ? "finishes" : "finish"} it</>}.
             </span>
           )}
         </p>
+
+        {/* Sending more than they need isn't thrown away — a reward only ever takes the card's required
+            count, so the rest sits on their next card. It does still leave YOUR card, though, and nothing
+            said so before. */}
+        {recipient.state === "ready" && recipient.needs > 0 && amount > recipient.needs && (
+          <div className="mt-2 rounded-lg border-2 border-dashed border-stamp-red bg-surface px-3 py-2">
+            <p className="text-sm text-ink">
+              They only need <b>{recipient.needs}</b> more to finish this card. Sending {amount} takes all{" "}
+              {amount} off your card — the spare {amount - recipient.needs}{" "}
+              {amount - recipient.needs === 1 ? "stamp goes" : "stamps go"} towards their next one.
+            </p>
+            <button
+              type="button"
+              onClick={() => setAmount(recipient.needs)}
+              className="mt-1 font-mono text-xs uppercase tracking-wide text-stamp-red underline underline-offset-4 hover:text-ink"
+            >
+              Send just {recipient.needs} instead
+            </button>
+          </div>
+        )}
 
         <Button className="mt-3" disabled={!canSend} onClick={handleSend}>
           {sending ? "Sending…" : `Send ${amount} ${amount === 1 ? "stamp" : "stamps"}`}

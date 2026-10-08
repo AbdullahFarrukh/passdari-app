@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { signUp, signIn, recoverAccount } from "@/lib/merchantAuth";
+import { saveSession, loadSession, clearSession } from "@/lib/session";
 import { useCustomerProgram } from "@/lib/customerProgram";
 import { RegisterBusinessForm } from "@/components/RegisterBusinessForm";
 import { MerchantDashboard } from "@/components/MerchantDashboard";
@@ -35,6 +36,16 @@ export default function MerchantPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const program = useCustomerProgram(keypair);
 
+  // Pick the session back up after a reload, the same as the customer page. In an effect, so the
+  // server-rendered markup and the first client render still match.
+  useEffect(() => {
+    const session = loadSession("merchant");
+    if (session) {
+      setKeypair(session.keypair);
+      setUsername(session.username);
+    }
+  }, []);
+
   // `quiet` refreshes the numbers in place. Without it the whole dashboard is replaced by "Checking your account…"
   // while it reloads, which also throws away anything on screen (like a receipt's QR code that is still being scanned).
   const checkForBusiness = (quiet = false) => {
@@ -64,6 +75,7 @@ export default function MerchantPage() {
       const { keypair: kp, mnemonic } = await signUp(username, password);
       setKeypair(kp);
       setNewMnemonic(mnemonic);
+      saveSession("merchant", username, kp);
     } catch (err) {
       console.error("Sign up failed:", err);
       setAuthError(err instanceof Error ? err.message : "Something went wrong");
@@ -74,7 +86,9 @@ export default function MerchantPage() {
     setAuthError(null);
     setKeypair(null);
     try {
-      setKeypair(await signIn(username, password));
+      const kp = await signIn(username, password);
+      setKeypair(kp);
+      saveSession("merchant", username, kp);
     } catch (err) {
       console.error("Sign in failed:", err);
       setAuthError("Incorrect username or password.");
@@ -86,6 +100,7 @@ export default function MerchantPage() {
     try {
       const kp = await recoverAccount(recoveryUsername, recoveryPhrase, recoveryPassword);
       setKeypair(kp);
+      saveSession("merchant", recoveryUsername, kp);
       setUsername(recoveryUsername);
       setShowRecovery(false);
       setRecoveryUsername("");
@@ -98,6 +113,7 @@ export default function MerchantPage() {
   }
 
   function handleSignOut() {
+    clearSession("merchant");
     setKeypair(null);
     setUsername("");
     setPassword("");

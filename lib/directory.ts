@@ -132,7 +132,15 @@ export async function getDirectory(): Promise<DirectoryBusiness[]> {
 // that use it cacheable: the display-name lookup talks to Upstash, whose client sends `no-store`, and a
 // `no-store` fetch anywhere in a page forces that whole page to be rebuilt on every single request.
 // Caching the finished directory puts that fetch inside its own scope, where it can't do that.
-const cachedDirectory = unstable_cache(getDirectory, ["passdari-business-directory"], { revalidate: 120 });
+export const DIRECTORY_CACHE_TAG = "passdari-directory";
+
+const cachedDirectory = unstable_cache(getDirectory, ["passdari-business-directory"], {
+  revalidate: 120,
+  // Counters (stamps given, rewards given) are allowed to lag by up to the two minutes above — nobody is
+  // watching a shop's stamp count tick. A shop that has just registered and can't find itself in the
+  // directory is a different matter, so /api/relay clears this tag the moment one is created.
+  tags: [DIRECTORY_CACHE_TAG],
+});
 
 /** Never let a directory outage take the home page down with it. */
 export async function getDirectorySafely(): Promise<DirectoryBusiness[]> {

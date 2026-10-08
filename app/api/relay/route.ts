@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Connection, Keypair, Transaction } from "@solana/web3.js";
 import nacl from "tweetnacl";
+import { revalidateTag } from "next/cache";
 import { isRateLimited } from "@/lib/rateLimit";
 import { rejectCrossSite } from "@/lib/sameOrigin";
+import { DIRECTORY_CACHE_TAG } from "@/lib/directory";
+
+// The first eight bytes of a register_business call, from lib/loyalty.json. A new shop that cannot find
+// itself in the directory looks broken, so this one instruction refreshes it straight away instead of
+// waiting for the two-minute timer.
+const REGISTER_BUSINESS_DISCRIMINATOR = Buffer.from([73, 228, 5, 59, 229, 67, 133, 82]);
 
 const connection = new Connection(process.env.HELIUS_RPC_URL ?? "https://api.devnet.solana.com");
 
@@ -108,6 +115,12 @@ export async function POST(request: NextRequest) {
       throw new Error(
         `Transaction was included but failed on-chain: ${JSON.stringify(confirmation.value.err)}`
       );
+    }
+
+    if (tx.instructions.some((ix) => ix.data.subarray(0, 8).equals(REGISTER_BUSINESS_DISCRIMINATOR))) {
+      // `{ expire: 0 }` drops the cached directory now rather than at the end of a profile window, so
+      // the very next visitor reads it fresh and sees the new shop.
+      revalidateTag(DIRECTORY_CACHE_TAG, { expire: 0 });
     }
 
     return NextResponse.json({ signature });

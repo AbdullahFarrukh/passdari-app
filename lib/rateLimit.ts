@@ -29,8 +29,13 @@ function getClient(): Redis | null {
   return client;
 }
 
-export async function isRateLimited(scope: string, ip: string, limit: Limit): Promise<boolean> {
-  const key = `${scope}:${ip}`;
+/**
+ * `caller` is whatever identifies the thing being limited. Usually an IP address, but for something
+ * worth limiting per person rather than per network — a whole café shares one IP — it can be a wallet
+ * address instead. It is only ever used as part of the key.
+ */
+export async function isRateLimited(scope: string, caller: string, limit: Limit): Promise<boolean> {
+  const key = `${scope}:${caller}`;
   const redis = getClient();
   if (redis) {
     try {

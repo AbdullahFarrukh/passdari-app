@@ -11,6 +11,16 @@ import { DIRECTORY_CACHE_TAG } from "@/lib/directory";
 // waiting for the two-minute timer.
 const REGISTER_BUSINESS_DISCRIMINATOR = Buffer.from([73, 228, 5, 59, 229, 67, 133, 82]);
 
+// Passing stamps to a friend is the one thing a customer can do over and over that costs the relayer a
+// fee and hands nothing back: no account is created, so no rent ever returns. Two people could bounce a
+// single stamp between their cards all day and the relayer would pay for every hop.
+//
+// The limit is per sending wallet, not per IP, because everyone in one café shares an IP and would knock
+// each other out. Ten a day is far above anything a real person does and far below anything that costs
+// real money: ten hops is 0.0001 SOL.
+const TRANSFER_STAMPS_DISCRIMINATOR = Buffer.from([84, 46, 125, 74, 19, 113, 252, 237]);
+const TRANSFERS_PER_WALLET_PER_DAY = 10;
+
 const connection = new Connection(process.env.HELIUS_RPC_URL ?? "https://api.devnet.solana.com");
 
 // The relayer's real secret key, read from an environment variable rather
@@ -66,6 +76,27 @@ export async function POST(request: NextRequest) {
     // relayer as a signer at all shouldn't reach the signing logic below.
     if (!tx.feePayer || tx.feePayer.toBase58() !== relayer.publicKey.toBase58()) {
       return NextResponse.json({ error: "Relayer must be the fee payer" }, { status: 400 });
+    }
+
+    // Stamp transfers are limited per sending wallet, checked before anything is signed or sent. The
+    // sender is the one signer on the transaction that isn't the relayer.
+    if (tx.instructions.some((ix) => ix.data.subarray(0, 8).equals(TRANSFER_STAMPS_DISCRIMINATOR))) {
+      const sender = tx.signatures.find(
+        (s) => s.publicKey.toBase58() !== relayer.publicKey.toBase58()
+      )?.publicKey;
+      if (!sender) {
+        return NextResponse.json({ error: "A stamp transfer must be signed by the sender" }, { status: 400 });
+      }
+      const limited = await isRateLimited("transfer-stamps", sender.toBase58(), {
+        max: TRANSFERS_PER_WALLET_PER_DAY,
+        windowMs: 24 * 60 * 60 * 1000,
+      });
+      if (limited) {
+        return NextResponse.json(
+          { error: `You can send stamps up to ${TRANSFERS_PER_WALLET_PER_DAY} times a day. Please try again tomorrow.` },
+          { status: 429 }
+        );
+      }
     }
 
     // Never call partialSign here, for either signer — it recompiles the

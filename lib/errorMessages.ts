@@ -1,5 +1,15 @@
-export function translateError(err: unknown): string {
+// `context` says what the person was doing, because the same framework error means different things in
+// different places. AccountNotInitialized during a claim means the code was already used; during a stamp
+// transfer it means the friend has no card at that shop, and the claim wording would be nonsense.
+export function translateError(err: unknown, context?: "transfer"): string {
   const raw = err instanceof Error ? err.message : String(err);
+
+  if (context === "transfer" && raw.includes("AccountNotInitialized")) {
+    return "That person doesn't have a card at this shop yet — they need to collect one stamp here first.";
+  }
+  if (context === "transfer" && raw.includes("ConstraintHasOne")) {
+    return "Those stamps can only go to a card at the same shop.";
+  }
 
   // Anchor's own built-in framework errors carry technically-accurate but
   // genuinely unhelpful text for a real customer — checked first, before

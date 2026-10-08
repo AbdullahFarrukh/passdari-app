@@ -1168,6 +1168,72 @@ export type Loyalty = {
       "args": []
     },
     {
+      "name": "transferStamps",
+      "discriminator": [
+        84,
+        46,
+        125,
+        74,
+        19,
+        113,
+        252,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "business",
+          "docs": [
+            "Both cards must belong to this shop. Nothing about the shop changes: no stamps are issued here,",
+            "only moved, so its running totals stay exactly as they were."
+          ],
+          "relations": [
+            "fromCard",
+            "toCard"
+          ]
+        },
+        {
+          "name": "fromCard",
+          "docs": [
+            "The sender's card. `has_one = customer` is what proves the signer owns it."
+          ],
+          "writable": true
+        },
+        {
+          "name": "toCard",
+          "docs": [
+            "The receiving card. It has to exist already — see rule 3 above."
+          ],
+          "writable": true
+        },
+        {
+          "name": "customer",
+          "docs": [
+            "The person giving their stamps away. Signs to prove it's them, and pays nothing."
+          ],
+          "signer": true,
+          "relations": [
+            "fromCard"
+          ]
+        },
+        {
+          "name": "relayer",
+          "docs": [
+            "The relayer, covering the transaction fee as it does everywhere else. How often one wallet may do",
+            "this is decided by the relayer before it co-signs, which is the right place for it: the limit",
+            "exists to protect the relayer's own balance, and the relayer is free to simply refuse."
+          ],
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u8"
+        }
+      ]
+    },
+    {
       "name": "transferVoucher",
       "discriminator": [
         242,
@@ -1464,6 +1530,19 @@ export type Loyalty = {
         167,
         59
       ]
+    },
+    {
+      "name": "stampsTransferred",
+      "discriminator": [
+        129,
+        236,
+        241,
+        189,
+        25,
+        156,
+        3,
+        246
+      ]
     }
   ],
   "errors": [
@@ -1556,6 +1635,16 @@ export type Loyalty = {
       "code": 6017,
       "name": "wrongRentPayer",
       "msg": "The rent must go back to the wallet that paid it"
+    },
+    {
+      "code": 6018,
+      "name": "invalidStampAmount",
+      "msg": "The number of stamps to transfer must be at least one"
+    },
+    {
+      "code": 6019,
+      "name": "tooManyStamps",
+      "msg": "That card cannot hold any more stamps"
     }
   ],
   "types": [
@@ -1775,6 +1864,34 @@ export type Loyalty = {
           },
           {
             "name": "stamps",
+            "type": "u8"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "stampsTransferred",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "business",
+            "type": "pubkey"
+          },
+          {
+            "name": "from",
+            "type": "pubkey"
+          },
+          {
+            "name": "to",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
             "type": "u8"
           },
           {

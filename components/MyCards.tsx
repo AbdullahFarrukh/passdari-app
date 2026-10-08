@@ -7,6 +7,7 @@ import { useCustomerProgram } from "@/lib/customerProgram";
 import { translateError } from "@/lib/errorMessages";
 import { Button } from "@/components/ui/Button";
 import { LoyaltyCardReceipt } from "@/components/ui/LoyaltyCardReceipt";
+import { TransferStamps } from "@/components/TransferStamps";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
@@ -292,6 +293,16 @@ export function MyCards({
                   <dd className="font-mono font-semibold text-ink">{card.rewardsEarned}</dd>
                 </div>
               </dl>
+
+              <TransferStamps
+                program={program}
+                keypair={keypair}
+                businessAddress={card.businessAddress}
+                businessName={card.name}
+                fromCard={card.cardAddress}
+                availableStamps={card.stamps}
+                onDone={onChange}
+              />
             </div>
           );
         })}

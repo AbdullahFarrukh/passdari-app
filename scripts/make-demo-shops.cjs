@@ -50,34 +50,31 @@ function keypairFromMnemonic(mnemonic) {
   return Keypair.fromSeed(derivePath("m/44'/501'/0'/0'", seed.toString("hex")).key);
 }
 
-function newAccount(username) {
-  const mnemonic = bip39.generateMnemonic();
-  return { username, mnemonic, keypair: keypairFromMnemonic(mnemonic) };
-}
-
 // ---------------------------------------------------------------------------
 // Who and what gets made.
 // Stamp counts are deliberately small: every stamp is claimed for real, and the program makes a card wait
 // a minute between stamps, so a shop needing ten would take an hour of real time to demonstrate.
 // ---------------------------------------------------------------------------
+// These names are deliberately different from the first (lost) run's, so the shops you can sign into are
+// never confused with the orphaned ones already sitting in the directory under other names.
 const SHOPS = [
-  { username: "chaiwala",     name: "Chai Wala",             category: "Cafe",       reward: "Free cup of chai",      stamps: 3, minPkr: 150 },
-  { username: "zaiqabakers",  name: "Zaiqa Bakers",          category: "Bakery",     reward: "Free dozen cupcakes",   stamps: 4, minPkr: 500 },
-  { username: "burgerhub",    name: "Burger Hub",            category: "Fast food",  reward: "Free Zinger burger",    stamps: 4, minPkr: 600 },
-  { username: "biryanihouse", name: "Karachi Biryani House", category: "Restaurant", reward: "Free biryani plate",    stamps: 3, minPkr: 800 },
-  { username: "stylestudio",  name: "Style Studio",          category: "Salon",      reward: "Free haircut",          stamps: 4, minPkr: 1200 },
-  { username: "alnoorpharma", name: "Al-Noor Pharmacy",      category: "Pharmacy",   reward: "20% off your next visit", stamps: 3, minPkr: 1000 },
+  { username: "chaikhana",    name: "Chai Khana",      category: "Cafe",       reward: "Free cup of chai",        stamps: 3, minPkr: 150 },
+  { username: "mithaighar",   name: "Mithai Ghar",     category: "Bakery",     reward: "Free box of mithai",      stamps: 4, minPkr: 500 },
+  { username: "burgerpoint",  name: "Burger Point",    category: "Fast food",  reward: "Free Zinger burger",      stamps: 4, minPkr: 600 },
+  { username: "lahorikarahi", name: "Lahori Karahi",   category: "Restaurant", reward: "Free karahi for two",     stamps: 3, minPkr: 800 },
+  { username: "glowsalon",    name: "Glow Salon",      category: "Salon",      reward: "Free haircut",            stamps: 4, minPkr: 1200 },
+  { username: "citypharmacy", name: "City Pharmacy",   category: "Pharmacy",   reward: "20% off your next visit", stamps: 3, minPkr: 1000 },
 ];
 
 const CUSTOMERS = [
-  { username: "ayesha",  name: "Ayesha Khan" },
-  { username: "bilal",   name: "Bilal Ahmed" },
-  { username: "fatima",  name: "Fatima Noor" },
-  { username: "hassan",  name: "Hassan Raza" },
-  { username: "zainab",  name: "Zainab Ali" },
-  { username: "usman",   name: "Usman Tariq" },
-  { username: "mariam",  name: "Mariam Siddiqui" },
-  { username: "omar",    name: "Omar Farooq" },
+  { username: "sana",    name: "Sana Malik" },
+  { username: "imran",   name: "Imran Shah" },
+  { username: "hira",    name: "Hira Javed" },
+  { username: "danish",  name: "Danish Iqbal" },
+  { username: "nida",    name: "Nida Rehman" },
+  { username: "kamran",  name: "Kamran Aslam" },
+  { username: "rabia",   name: "Rabia Yousuf" },
+  { username: "tariq",   name: "Tariq Mehmood" },
 ];
 
 // Per shop: which customers shop there, how many rewards each has finished, and how many stamps they are
@@ -113,21 +110,41 @@ function tokenAccountFor(owner, mint) {
   )[0];
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// A long run over a public RPC endpoint will hit the occasional dropped connection. Dying on one of
+// those wastes everything done so far, so anything that talks to the network gets a few goes at it.
+// Errors the chain itself raised are not retried: those mean the instruction was wrong, and repeating
+// it would only be wrong again.
+async function withRetries(what, attempt) {
+  let lastError;
+  for (let tries = 1; tries <= 4; tries += 1) {
+    try {
+      return await attempt();
+    } catch (err) {
+      const message = err?.message ?? String(err);
+      if (/custom program error|Error Code:|insufficient|already in use/i.test(message)) throw err;
+      lastError = err;
+      if (tries < 4) {
+        console.log(`    … ${what}: ${message.split("\n")[0]} — retrying (${tries}/3)`);
+        await sleep(2000 * tries);
+      }
+    }
+  }
+  throw new Error(`${what} failed after 4 tries: ${lastError?.message ?? lastError}`);
+}
+
 async function send(instructions, signers, what) {
-  const tx = new Transaction().add(...instructions);
-  tx.feePayer = relayer.publicKey;
-  tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-  tx.sign(...signers);
-  try {
+  return withRetries(what, async () => {
+    const tx = new Transaction().add(...instructions);
+    tx.feePayer = relayer.publicKey;
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    tx.sign(...signers);
     const sig = await connection.sendRawTransaction(tx.serialize(), { maxRetries: 5 });
     await connection.confirmTransaction(sig, "confirmed");
     return sig;
-  } catch (err) {
-    throw new Error(`${what} failed: ${err.message}`);
-  }
+  });
 }
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function registerShop(shop) {
   const business = pda([Buffer.from("business"), shop.keypair.publicKey.toBuffer()]);
@@ -272,8 +289,47 @@ async function saveNames(people) {
   const shopPlan = smoke ? [{ ...SHOPS[0], username: "smoketest", name: "Smoke Test Cafe", stamps: 1 }] : SHOPS;
   const tradePlan = smoke ? [[[0, 1, 1]]] : TRADE;
 
-  const shops = shopPlan.map((s) => ({ ...s, ...newAccount(s.username) }));
-  const customers = (smoke ? CUSTOMERS.slice(0, 1) : CUSTOMERS).map((c) => ({ ...c, ...newAccount(c.username) }));
+  const out = path.join(APP_DIR, "..", smoke ? "passdari-smoke-credentials.json" : "passdari-demo-credentials.json");
+
+  // The phrases are written to disk BEFORE anything is registered, and read back on a later run.
+  //
+  // This matters more than it looks. A 12-word phrase is the only thing that can ever sign for its
+  // wallet, and a business account can never be closed, so a run that creates shops and then dies before
+  // saving its phrases leaves shops on-chain that nobody — not even us — can ever sign for again. That
+  // happened once. Generating the phrases up front and saving them first makes the whole run resumable:
+  // stop it whenever, run it again, and it carries on with the same accounts.
+  let saved = null;
+  if (fs.existsSync(out)) {
+    saved = JSON.parse(fs.readFileSync(out, "utf8"));
+    console.log(`Continuing with the accounts already in ${path.basename(out)}\n`);
+  }
+
+  const reuse = (list, username) => list?.find((entry) => entry.username === username)?.recoveryPhrase;
+  const account = (username, savedList) => {
+    const mnemonic = reuse(savedList, username) ?? bip39.generateMnemonic();
+    return { username, mnemonic, keypair: keypairFromMnemonic(mnemonic) };
+  };
+
+  const shops = shopPlan.map((s) => ({ ...s, ...account(s.username, saved?.shops) }));
+  const customers = (smoke ? CUSTOMERS.slice(0, 1) : CUSTOMERS)
+    .map((c) => ({ ...c, ...account(c.username, saved?.customers) }));
+
+  const writeCredentials = () => fs.writeFileSync(out, JSON.stringify({
+    note: "Devnet demo accounts. Sign in with the app's 'Recover account' option: username + 12 words + a new password of at least 8 characters.",
+    created: saved?.created ?? new Date().toISOString(),
+    shops: shops.map((s) => ({
+      shopName: s.name, signInAt: "/merchant", username: s.username, recoveryPhrase: s.mnemonic,
+      wallet: s.keypair.publicKey.toBase58(),
+      businessAccount: pda([Buffer.from("business"), s.keypair.publicKey.toBuffer()]).toBase58(),
+    })),
+    customers: customers.map((c) => ({
+      displayName: c.name, signInAt: "/customer", username: c.username, recoveryPhrase: c.mnemonic,
+      wallet: c.keypair.publicKey.toBase58(),
+    })),
+  }, null, 2));
+
+  writeCredentials();
+  console.log(`Phrases saved to ${out} before anything was created on-chain.\n`);
 
   console.log("Registering shops");
   for (const shop of shops) shop.business = await registerShop(shop);
@@ -281,27 +337,37 @@ async function saveNames(people) {
   console.log("\nSaving customer names");
   await saveNames(customers);
 
-  // What each card needs in total, and how much of it is already done.
+  // What each card needs in total, and how much of it is already done. "Done" is read off the card
+  // itself rather than counted in memory, so stopping and starting again picks up exactly where it was
+  // instead of stamping everything a second time.
   const cards = [];
-  shops.forEach((shop, shopIndex) => {
+  for (const [shopIndex, shop] of shops.entries()) {
     for (const [customerIndex, rewards, leftover] of tradePlan[shopIndex]) {
       const customer = customers[customerIndex];
+      const address = pda([Buffer.from("card"), shop.business.toBuffer(), customer.keypair.publicKey.toBuffer()]);
+      const existing = await withRetries(`reading ${customer.name}'s card at ${shop.name}`,
+        () => program.account.loyaltyCard.fetchNullable(address));
+      const alreadyGiven = existing ? Number(existing.lifetimeStamps) : 0;
+      const alreadyCashedIn = existing && existing.stampsRequiredSnapshot > 0
+        ? Math.floor((Number(existing.lifetimeStamps) - existing.stamps) / existing.stampsRequiredSnapshot)
+        : 0;
       cards.push({
-        shop, customer,
-        address: pda([Buffer.from("card"), shop.business.toBuffer(), customer.keypair.publicKey.toBuffer()]),
-        rewardsWanted: rewards,
+        shop, customer, address,
+        rewardsWanted: Math.max(0, rewards - alreadyCashedIn),
         stampsWanted: rewards * shop.stamps + leftover,
-        given: 0,
-        lastStampAt: 0,
+        given: alreadyGiven,
+        // A card stamped on an earlier run may still be inside its one-minute cooldown.
+        lastStampAt: existing ? Number(existing.lastStampTs) * 1000 : 0,
       });
     }
-  });
+  }
+  const resumed = cards.reduce((n, c) => n + c.given, 0);
+  if (resumed > 0) console.log(`  · ${resumed} stamps were already given on an earlier run`);
 
   const totalStamps = cards.reduce((n, c) => n + c.stampsWanted, 0);
   console.log(`\nStamping: ${totalStamps} stamps across ${cards.length} cards at ${shops.length} shops.`);
   console.log("A card has to wait a minute between stamps, so this cycles through all the cards in turn.\n");
 
-  let done = 0;
   while (cards.some((c) => c.given < c.stampsWanted)) {
     for (const card of cards) {
       if (card.given >= card.stampsWanted) continue;
@@ -310,12 +376,12 @@ async function saveNames(people) {
       await giveStamp(card.shop, card.shop.business, card.customer, card.address);
       card.given += 1;
       card.lastStampAt = Date.now();
-      done += 1;
-      if (done % 10 === 0 || done === totalStamps) {
-        console.log(`  ${done}/${totalStamps} stamps`);
-      }
+
+      const done = cards.reduce((n, c) => n + Math.min(c.given, c.stampsWanted), 0);
+      if (done % 10 === 0 || done === totalStamps) console.log(`  ${done}/${totalStamps} stamps`);
+
       // Cash in as soon as a card is full, so the stamps make room for the next round.
-      const full = await program.account.loyaltyCard.fetch(card.address);
+      const full = await withRetries("reading a card", () => program.account.loyaltyCard.fetch(card.address));
       if (card.rewardsWanted > 0 && full.stamps >= full.stampsRequiredSnapshot) {
         await cashIn(card.shop, card.shop.business, card.customer, card.address);
         card.rewardsWanted -= 1;
@@ -327,13 +393,6 @@ async function saveNames(people) {
   const after = await connection.getBalance(relayer.publicKey);
   console.log(`\nRelayer spent ${((before - after) / 1e9).toFixed(4)} SOL. Balance now ${(after / 1e9).toFixed(4)} SOL.`);
 
-  const credentials = {
-    note: "Devnet demo accounts. Sign in with the app's 'Recover account' option: username + 12 words + a new password of at least 8 characters.",
-    created: new Date().toISOString(),
-    shops: shops.map((s) => ({ shopName: s.name, signInAt: "/merchant", username: s.username, recoveryPhrase: s.mnemonic, wallet: s.keypair.publicKey.toBase58(), businessAccount: s.business.toBase58() })),
-    customers: customers.map((c) => ({ displayName: c.name, signInAt: "/customer", username: c.username, recoveryPhrase: c.mnemonic, wallet: c.keypair.publicKey.toBase58() })),
-  };
-  const out = path.join(APP_DIR, "..", smoke ? "passdari-smoke-credentials.json" : "passdari-demo-credentials.json");
-  fs.writeFileSync(out, JSON.stringify(credentials, null, 2));
-  console.log(`\nCredentials written to ${out}`);
+  writeCredentials();
+  console.log(`Credentials in ${out}`);
 })().catch((e) => { console.error("\nFAILED:", e.message ?? e); process.exit(1); });

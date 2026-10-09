@@ -40,7 +40,6 @@ function toCard(
 ): CardWithBusiness {
   const stamps = entry.account.stamps as number;
   const lifetimeStamps = entry.account.lifetimeStamps as number;
-  const stampsPerReward = entry.account.stampsRequiredSnapshot as number;
   return {
     cardAddress: entry.publicKey.toBase58(),
     businessAddress: entry.account.business,
@@ -51,8 +50,9 @@ function toCard(
     cardNft: null,
     lifetimeStamps,
     rentPayer: (entry.account.rentPayer as PublicKey) ?? null,
-    // Stamps only leave a card when they are spent on a voucher, so this is how many rewards the customer has earned.
-    rewardsEarned: stampsPerReward > 0 ? Math.floor((lifetimeStamps - stamps) / stampsPerReward) : 0,
+    // The card keeps this count itself; it used to be worked out from the stamps, which went wrong as
+    // soon as a shop changed how many a reward takes.
+    rewardsEarned: entry.account.rewardsEarned as number,
     name: business.name as string,
     rewardLabel: business.rewardLabel as string,
   };

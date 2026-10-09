@@ -30,6 +30,7 @@ export function EditBusinessForm({
     stampsRequired: number;
     minPurchaseAmount: BN | number;
     receiptTtlSeconds: number;
+    termsLockedUntil: BN | number;
   };
   onSaved: () => void;
 }) {
@@ -37,6 +38,13 @@ export function EditBusinessForm({
   const [stampsRequired, setStampsRequired] = useState(Number(business.stampsRequired));
   const [minPurchasePkr, setMinPurchasePkr] = useState(Number(business.minPurchaseAmount.toString()) / 100);
   const [receiptMinutes, setReceiptMinutes] = useState(Math.round(Number(business.receiptTtlSeconds) / 60));
+  // The date this offer runs until. While it is in the future the shop cannot change its reward at all,
+  // which is the point: a customer collecting towards free pizza finishes collecting towards free pizza.
+  const lockedUntil = Number(business.termsLockedUntil.toString());
+  const stillCommitted = lockedUntil > Math.floor(Date.now() / 1000);
+  const [runsUntil, setRunsUntil] = useState(
+    lockedUntil > 0 ? new Date(lockedUntil * 1000).toISOString().slice(0, 10) : ""
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -56,7 +64,8 @@ export function EditBusinessForm({
           rewardLabel.trim(),
           stampsRequired,
           new BN(Math.round(minPurchasePkr * 100)),
-          receiptMinutes * 60
+          receiptMinutes * 60,
+          new BN(runsUntil ? Math.floor(new Date(runsUntil + "T23:59:59Z").getTime() / 1000) : 0)
         )
         .accounts({ business: businessPda, authority: keypair.publicKey } as any)
         .transaction();
@@ -98,6 +107,13 @@ export function EditBusinessForm({
             changed — they are printed into every card and reward already in someone&apos;s wallet.
           </p>
 
+          {stillCommitted && (
+            <p className="err mt-3">
+              This offer runs until {new Date(lockedUntil * 1000).toLocaleDateString()}, so its terms are
+              fixed until then. Customers are collecting against it right now.
+            </p>
+          )}
+
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="edit-reward" className="eyebrow">Reward label</label>
@@ -118,7 +134,19 @@ export function EditBusinessForm({
               <input id="edit-ttl" type="number" min={1} max={1440} className="field" value={receiptMinutes}
                 onChange={(e) => setReceiptMinutes(Math.max(1, Math.min(1440, Number(e.target.value) || 1)))} />
             </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="edit-until" className="eyebrow">This offer runs until</label>
+              <input id="edit-until" type="date" className="field" value={runsUntil}
+                onChange={(e) => setRunsUntil(e.target.value)} />
+            </div>
           </div>
+
+          {runsUntil && !stillCommitted && (
+            <p className="mt-3 rounded-lg border-2 border-dashed border-stamp-blue bg-surface px-3 py-2 text-sm text-ink">
+              You won&apos;t be able to change this reward again until {runsUntil}. That is the promise
+              customers see: anyone collecting knows the offer will still be here when they finish.
+            </p>
+          )}
 
           {stampsChanged && (
             <p className="mt-3 rounded-lg border-2 border-dashed border-stamp-blue bg-surface px-3 py-2 text-sm text-ink">
@@ -136,7 +164,7 @@ export function EditBusinessForm({
           )}
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Button onClick={handleSave} disabled={saving || !rewardLabel.trim()}>
+            <Button onClick={handleSave} disabled={saving || stillCommitted || !rewardLabel.trim()}>
               {saving ? "Saving…" : "Save changes"}
             </Button>
             {saved && !error && <span className="text-sm font-medium text-ink" role="status">Saved.</span>}

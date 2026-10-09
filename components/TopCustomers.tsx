@@ -38,11 +38,9 @@ export function TopCustomers({ program, keypair, refreshKey }: { program: Progra
       // divided by that count is the number of vouchers they've made.
       const sorted = allCards
         .map((entry) => {
-          const spent = (entry.account.lifetimeStamps as number) - (entry.account.stamps as number);
-          const perReward = entry.account.stampsRequiredSnapshot as number;
           return {
             address: (entry.account.customer as PublicKey).toBase58(),
-            rewards: perReward > 0 ? Math.floor(spent / perReward) : 0,
+            rewards: entry.account.rewardsEarned as number,
           };
         })
         .filter((c) => c.rewards > 0)

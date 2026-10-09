@@ -54,13 +54,12 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
-// How many rewards a customer has earned at one shop. Same reasoning as the merchant's own leaderboard in
-// components/TopCustomers.tsx: stamps only ever leave a card by being spent on a voucher, and each voucher
-// costs that card's own required count, so (every stamp ever earned − stamps still on the card) ÷ that
-// count is how many rewards they have completed.
-function rewardsEarned(card: { lifetimeStamps: number; stamps: number; stampsRequiredSnapshot: number }): number {
-  const spent = card.lifetimeStamps - card.stamps;
-  return card.stampsRequiredSnapshot > 0 ? Math.floor(spent / card.stampsRequiredSnapshot) : 0;
+// How many rewards a customer has earned at one shop. The card counts this itself now. It used to be
+// derived as (every stamp ever earned − stamps still on the card) ÷ the card's required count, which only
+// held while that count never changed — and keeping it unchanged meant a customer who opened a card years
+// ago was stuck on those terms for ever.
+function rewardsEarned(card: { rewardsEarned: number }): number {
+  return card.rewardsEarned;
 }
 
 /**
@@ -81,11 +80,7 @@ export async function getDirectory(): Promise<DirectoryBusiness[]> {
   const cardsByBusiness = new Map<string, DirectoryCustomer[]>();
   for (const { account } of cards) {
     const businessKey = (account.business as PublicKey).toBase58();
-    const rewards = rewardsEarned({
-      lifetimeStamps: toNumber(account.lifetimeStamps),
-      stamps: toNumber(account.stamps),
-      stampsRequiredSnapshot: toNumber(account.stampsRequiredSnapshot),
-    });
+    const rewards = rewardsEarned({ rewardsEarned: toNumber(account.rewardsEarned) });
     if (rewards <= 0) continue; // Nobody is a "top customer" before their first finished card.
     const list = cardsByBusiness.get(businessKey) ?? [];
     list.push({ name: null, address: (account.customer as PublicKey).toBase58(), rewards });

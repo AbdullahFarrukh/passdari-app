@@ -31,10 +31,12 @@ const program = new Program(idl, new AnchorProvider(
   { commitment: "confirmed" }
 ));
 const PROGRAM_ID = program.programId;
-const OLD_CARD_LEN = 103;
-const CARD_DISCRIMINATOR = Buffer.from(
-  idl.accounts.find((a) => a.name === "LoyaltyCard").discriminator
-);
+// Cards have grown twice: 103 -> 135 (rent_payer) -> 139 (rewards_earned). Shops once: 193 -> 241.
+// Anything below the current size needs migrating.
+const CARD_LEN_NOW = 139;
+const BUSINESS_LEN_NOW = 241;
+const CARD_DISCRIMINATOR = Buffer.from(idl.accounts.find((a) => a.name === "LoyaltyCard").discriminator);
+const BUSINESS_DISCRIMINATOR = Buffer.from(idl.accounts.find((a) => a.name === "Business").discriminator);
 
 const pda = (seeds) => PublicKey.findProgramAddressSync(seeds, PROGRAM_ID)[0];
 const u32le = (n) => { const b = Buffer.alloc(4); b.writeUInt32LE(n); return b; };
@@ -57,15 +59,40 @@ async function withRetries(what, attempt) {
   const before = await connection.getBalance(relayer.publicKey);
   console.log(`relayer ${relayer.publicKey.toBase58()} starts with ${(before / 1e9).toFixed(5)} SOL`);
 
-  // Read the raw accounts: an old card cannot be decoded by the new IDL, which is the whole point.
-  // Filter by size — 103 bytes belongs to no other account type this program makes — then confirm the
-  // discriminator in case that ever stops being true.
-  const old = (await connection.getProgramAccounts(PROGRAM_ID, { filters: [{ dataSize: OLD_CARD_LEN }] }))
-    .filter((a) => a.account.data.subarray(0, 8).equals(CARD_DISCRIMINATOR));
-  const current = (await program.account.loyaltyCard.all()).length;
-  console.log(`${current} cards already on the current shape, ${old.length} still on the old one\n`);
-  if (old.length === 0) return console.log("Nothing to migrate.");
+  // Read raw: an old account cannot be decoded by the new IDL, which is the whole point. Everything the
+  // program owns is fetched once and sorted by discriminator and length.
+  const all = await connection.getProgramAccounts(PROGRAM_ID);
+  const old = all.filter((a) =>
+    a.account.data.subarray(0, 8).equals(CARD_DISCRIMINATOR) && a.account.data.length < CARD_LEN_NOW);
+  const oldShops = all.filter((a) =>
+    a.account.data.subarray(0, 8).equals(BUSINESS_DISCRIMINATOR) && a.account.data.length < BUSINESS_LEN_NOW);
+  console.log(`${old.length} cards and ${oldShops.length} shops still on an old shape\n`);
+  if (old.length === 0 && oldShops.length === 0) return console.log("Nothing to migrate.");
   if (DRY) return console.log("Dry run: stopping before sending anything.");
+
+  // Shops first. A card's own migration does not need its shop, but the app cannot read either until
+  // both are current, so there is no reason to leave shops behind.
+  let shopsDone = 0;
+  for (const { pubkey } of oldShops) {
+    try {
+      const ix = await program.methods.migrateBusiness()
+        .accounts({ business: pubkey, relayer: relayer.publicKey, systemProgram: SystemProgram.programId })
+        .instruction();
+      await withRetries(`migrating shop ${pubkey.toBase58().slice(0, 8)}`, async () => {
+        const tx = new Transaction().add(ix);
+        tx.feePayer = relayer.publicKey;
+        tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        tx.sign(relayer);
+        await connection.confirmTransaction(
+          await connection.sendRawTransaction(tx.serialize(), { maxRetries: 5 }), "confirmed");
+      });
+      shopsDone += 1;
+      if (shopsDone % 20 === 0) console.log(`  shops ${shopsDone}/${oldShops.length}`);
+    } catch (err) {
+      console.error(`  ! shop ${pubkey.toBase58()}: ${(err.message ?? err).split("\n")[0]}`);
+    }
+  }
+  if (oldShops.length) console.log(`  shops migrated: ${shopsDone}/${oldShops.length}`);
 
   let done = 0, recordsClosed = 0, failed = 0;
   for (const { pubkey, account } of old) {
@@ -108,13 +135,18 @@ async function withRetries(what, attempt) {
 
   const after = await connection.getBalance(relayer.publicKey);
   const movement = after - before;
-  console.log(`\nmigrated ${done}, closed ${recordsClosed} old records, ${failed} failed`);
+  console.log(`\nmigrated ${done} cards and ${shopsDone} shops, closed ${recordsClosed} old records, ${failed} failed`);
   console.log(`relayer balance moved by ${(movement / 1e9).toFixed(6)} SOL`);
   console.log(movement >= 0
     ? "  (positive: the old records handed back more than the extra card bytes cost)"
     : "  (negative: the extra card bytes cost more than the records handed back)");
 
-  const left = (await connection.getProgramAccounts(PROGRAM_ID, { filters: [{ dataSize: OLD_CARD_LEN }] }))
-    .filter((a) => a.account.data.subarray(0, 8).equals(CARD_DISCRIMINATOR)).length;
-  console.log(left === 0 ? "Every card is on the current shape." : `STILL OLD: ${left} cards — re-run.`);
+  const remaining = await connection.getProgramAccounts(PROGRAM_ID);
+  const leftCards = remaining.filter((a) =>
+    a.account.data.subarray(0, 8).equals(CARD_DISCRIMINATOR) && a.account.data.length < CARD_LEN_NOW).length;
+  const leftShops = remaining.filter((a) =>
+    a.account.data.subarray(0, 8).equals(BUSINESS_DISCRIMINATOR) && a.account.data.length < BUSINESS_LEN_NOW).length;
+  console.log(leftCards === 0 && leftShops === 0
+    ? "Every card and shop is on the current shape."
+    : `STILL OLD: ${leftCards} cards, ${leftShops} shops — re-run.`);
 })().catch((e) => { console.error("FAILED:", e.message ?? e); process.exit(1); });

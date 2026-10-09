@@ -100,6 +100,8 @@ export async function runCleanup(connection: Connection, relayer: Keypair, scope
         .closeExpiredVoucher()
         .accounts({
           voucher: v.publicKey,
+          // The shop, so its count of rewards still owed comes down when an expired one is cleared.
+          business: v.account.business,
           mint,
           holderToken,
           rentPayer: v.account.rentPayer,

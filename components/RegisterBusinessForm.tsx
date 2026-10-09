@@ -65,7 +65,10 @@ export function RegisterBusinessForm({ keypair, onDone }: { keypair: Keypair; on
           stampsRequired,
           minPurchaseMinorUnits,
           "PKR",
-          receiptTtlSeconds
+          receiptTtlSeconds,
+          // No commitment at registration: 0 means "nothing promised yet". A shop decides how long to
+          // stand behind an offer once it is actually open, from its own dashboard.
+          new BN(0)
         )
         .accounts({
           business: businessPda,

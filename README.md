@@ -68,14 +68,34 @@ Create `.env.local`:
 | `NEXT_PUBLIC_SOLANA_CLUSTER` | `devnet` (default), `localnet` or `mainnet-beta`, for the Explorer links | Optional |
 
 **Point it at devnet** (what the live site does): set the two RPC addresses to a
-devnet endpoint and fund the relayer with a few devnet SOL. The relayer's rent
-comes back: a receipt's when it is claimed or cleaned up, a card NFT's (about
-0.006 SOL) when the card is cashed in or its NFT is recycled after 90 idle days,
-and a voucher's (about 0.008 SOL) when it is redeemed or closed after its 90 days
-run out. What it really spends is transaction fees, about 0.00002 SOL per stamp,
-plus a one-time deposit for each business and each stamp card. The app passes each
-receipt's and voucher's recorded `rentPayer` when closing it — see `lib/cleanup.ts`
-and "Housekeeping," below.
+devnet endpoint and fund the relayer with a few devnet SOL.
+
+### What the relayer actually spends
+
+Fees are the only thing it never gets back. Every transaction this app builds has
+two signatures at 5,000 lamports each, because the relayer is always the fee payer
+and a fee payer always signs:
+
+| Action | Fee |
+|---|---|
+| Register a business | 0.00001 SOL |
+| One stamp | 0.00002 SOL |
+| One reward (mint, present, redeem) | 0.00003 SOL |
+| Send stamps to a friend | 0.00001 SOL |
+| Any clean-up | 0.000005 SOL |
+
+Rent is a loan, not a cost. Measured on devnet: an active stamp card with its NFT
+holds **0.00580 SOL**, and a live voucher **0.00613 SOL** more until it is redeemed.
+Every account can now be closed and its rent returned — including stamp cards and
+businesses, which until October 2026 were the two things that could never come back.
+The app passes each account's recorded `rentPayer` when closing it; see
+`lib/cleanup.ts` and "Housekeeping," below. The program repo's README has the full
+per-account table and the mainnet multiplier.
+
+**A rough bill.** 100 shops with 500 active customers each, visiting weekly, is
+about **4.9 SOL a month in fees**, against roughly 310 SOL of rent held at any one
+moment and returned as cards and vouchers close. At that size the working capital
+matters far more than the running cost.
 
 **Or run everything locally:** build the program in the program repo
 (`anchor build`), start a validator with it loaded, and fund the relayer:
@@ -103,9 +123,52 @@ dev server refuses `127.0.0.1` and the page never becomes interactive. Customer:
 
 ## Features
 
-**Merchant:** registration (with a panel explaining that the business becomes an account on Solana), then a dashboard: the business account's address, four counters (cards registered, stamps issued, rewards given, vouchers pending) that stay current on their own, "New sale" with a one-time receipt as a QR code, its own on-chain address and how long it stays valid, the list of presented vouchers with each holder and NFT and a Redeem button (redeeming burns the NFT), top loyal customers by name and by *rewards earned*, not raw stamp count, a "Clean up" button covering expired receipts, vouchers past their 90 days and idle card NFTs (see "Housekeeping," below), and an AI copilot chat bubble with three tested, clickable questions. A "Demo tools" fold holds a button that lowers the reward threshold to 1 for demos.
+**Public, before anyone signs in:** the home page lists the ten busiest shops with
+each one's five most loyal customers, read straight off the chain, and `/businesses`
+searches all of them with a page per category. Every figure is the shop's own
+on-chain counter and every slip links to a block explorer, so a visitor can check
+any claim without taking the site's word for it. These pages are server-rendered and
+carry a sitemap and structured data, because they are the only part of the app a
+search engine can read. A new shop appears within seconds of registering: `/api/relay`
+clears the directory's cache when it co-signs a `register_business`.
+
+**Merchant:** registration (with a panel explaining that the business becomes an account on Solana), then a dashboard: the business account's address, four counters (cards registered, stamps issued, rewards given, vouchers pending) that stay current on their own, "New sale" with a one-time receipt as a QR code, its own on-chain address and how long it stays valid, the list of presented vouchers with each holder and NFT and a Redeem button (redeeming burns the NFT), top loyal customers by name and by *rewards earned*, not raw stamp count, a "Clean up" button covering expired receipts, vouchers past their 90 days and idle card NFTs (see "Housekeeping," below), and an AI copilot chat bubble with three tested, clickable questions.
+
+**"Change your reward"** lets a merchant edit the reward's name, how many stamps it
+takes, the minimum purchase and how long a code lasts — and set the date the offer
+runs until. The shop's own name and category are not editable: they are printed into
+every card and voucher NFT already in a customer's wallet. The form says what each
+change does before it is saved: raising the stamp count is safe for anyone already
+collecting, renaming the reward is not, and committing to an end date means the
+reward cannot be changed again until it passes (at which point the form goes
+read-only and explains why).
 
 **Customer:** sign up / sign in / account recovery via backup phrase, a header showing the wallet (a picture made from its address, the address itself, and an "About your wallet" explanation), the recovery phrase shown once with a button to dismiss it, profile stats, a claim panel (camera QR scanning with manual entry fallback, which also shows which merchant a pasted code came from), "My cards" with a real stamp-row visual, stamps earned and rewards earned, each card's own address, a "Card NFT in your wallet" line with its address (the claim that gives a card its first stamp also creates the NFT, in the same transaction, and cashing in burns it; the line says "No card NFT right now" until the next stamp brings a new one, and after 90 idle days the NFT is recycled the same way — the stamps stay), and Token-2022 NFT vouchers drawn as tickets, each showing when it's valid until (90 days from minting), that can be presented, cancelled or gifted (the list refreshes by itself while a voucher is presented, so a redeemed one disappears without a reload), plus a directory of the customer's own participating businesses.
+
+**"Send stamps to a friend"** sits shut under each card. It asks for the friend's
+*wallet* address — the thing they can copy off their own screen — works out their
+card, and checks it exists before anything is sent, showing their name and current
+stamp count so the sender can confirm the right person. Send stays disabled for a
+malformed address, your own wallet, or anyone without a card at that shop. If the
+friend needs fewer stamps than you are sending, it says so and offers the smaller
+amount in one click: the spare ones are not wasted, they go towards the friend's
+next card, but they do still leave yours.
+
+**"Take this wallet with you"** sits shut under the account bar. Opened, it says
+plainly that the wallet is the customer's own, shows its address, and will reveal
+the 12 words again — after the password is typed a second time, because being signed
+in should not be enough to hand over a whole wallet. It is the one place a customer
+finds out they can open this account in Phantom or Solflare.
+
+**Staying signed in.** The unlocked key lives in `sessionStorage`, scoped to one tab
+and thrown away when that tab closes, so a page refresh no longer drops back to the
+sign-in screen. Signing out clears it. The 12 words stay in `localStorage`, encrypted
+with the password, exactly as before. The trade-off: anything able to run script in
+the page can read the key while the tab is open, which is what the content security
+policy is there to prevent.
+
+**The customer page keeps itself current** on an eight-second timer, paused while the
+tab is in the background, so stamps a friend sends turn up on their own.
 
 ## Architecture notes
 
@@ -144,6 +207,8 @@ customer's signature: only the relayer's, so this can run unattended.
 - **Cross-site writes are refused.** The endpoints that change state (relay, copilot, customer-name and cleanup POSTs) return 403 when the browser's `Origin` header names a different site. Requests with no `Origin` (the daily cron job, curl) pass through. CORS is not opened up anywhere, so other sites can't read any response either.
 - **Headers and CSP.** Every response carries a Content-Security-Policy limited to this site and its configured RPC endpoint, plus HSTS, `X-Frame-Options: DENY` (the app can't be framed), `nosniff`, a strict referrer policy, a Permissions-Policy that only allows the camera for the QR scanner, and `Cross-Origin-Opener-Policy: same-origin`. Scripts still allow `'unsafe-inline'` because Next.js needs it for its bootstrap code; a nonce-based policy would remove that (see `next.config.ts`).
 - **The relay endpoint** only co-signs a transaction if every instruction in it is a call into the Passdari program and the relayer is the fee payer. Payloads over 4,000 characters are refused, and each IP address gets 15 requests a minute.
+- **Stamp transfers are capped per wallet, not per IP** — ten a day. Passing stamps to a friend is the one thing a customer can repeat that costs the relayer a fee and hands nothing back, since no account is created and so no rent ever returns; two people could otherwise bounce a single stamp between their cards all day. Per wallet rather than per IP because everyone in one café shares an IP and would knock each other out.
+- **The signed-in key survives a reload** in `sessionStorage`, scoped to one tab and cleared when that tab closes or the person signs out. The encrypted 12 words stay in `localStorage` as before; this only holds the already-unlocked key for the life of the tab. The honest trade-off is that script running in the page can read it for that long rather than only while the page is loaded.
 - **The copilot** hands out a business's customer data, and a business's address is public on-chain, so it needs proof of ownership. The merchant's browser signs each question with the merchant's wallet (over the owner, the exact question and the time), and the server checks it before doing anything expensive. A signature is good for two minutes either way, so an old copy is useless, and a copy replayed inside that window can only repeat the same question. 10 requests a minute per IP.
 - **Display names** are signed the same way (`lib/nameAuth.ts`, a five-minute window, with its own message prefix so a signature for one purpose can't be used for the other). 20 requests a minute per IP.
 - **Rate limits are shared.** Every limit above is counted in Upstash Redis (`lib/rateLimit.ts`), so all serverless instances share one count. If the store can't be reached, the check falls back to a per-instance count instead of blocking every real user. Without any Upstash settings, the count is per instance only, which is weaker. The customer-names read endpoint allows 60 requests a minute.
@@ -155,21 +220,60 @@ customer's signature: only the relayer's, so this can run unattended.
 
 The live site is a Vercel project deployed from `main`; every other branch gets a preview. Set the environment variables from the table above for Production, Preview and Development. The names store comes from Vercel's Upstash Redis integration (Storage, then connect it to the project for all environments and leave the custom prefix empty). Vercel doesn't apply new or changed variables to existing deployments, so redeploy after changing them.
 
-The app and the program on devnet have to stay in step: a program upgrade that changes an instruction's arguments or accounts breaks the previous version of the app until the new one is deployed.
+The app and the program on devnet have to stay in step: a program upgrade that
+changes an instruction's arguments or accounts breaks the previous version of the
+app until the new one is deployed. Two of those have shipped, and the order that
+works is:
+
+1. `solana program extend <program-id> <bytes>` if the build has outgrown its space
+2. Upgrade the program
+3. **Immediately** run `node scripts/migrate-accounts.cjs` — an account that has
+   grown is shorter than the struct the new program expects, so it cannot be read
+   at all until it has been migrated, and those customers see nothing in the
+   meantime. The script is idempotent, has a `--dry-run`, finds old accounts by
+   size rather than by decoding them, and reports anything left over.
+4. Push the app
+5. Verify
+
+The site is down between steps 2 and 4. Keep that window to minutes.
 
 Set `CRON_SECRET` before or right after the first deploy, so the daily clean-up sweep (see "Housekeeping," above) runs rather than refusing itself.
 
 ## Known limitations
 
 - Checked at phone widths (320 to 414 pixels) in a headless browser, but never tested on a real mobile device. The camera scanner in particular needs HTTPS to work on a phone at all; a manual code-entry fallback exists for exactly this reason.
-- There are no automated tests for the frontend in this repo. It was checked by driving the real screens in a headless browser, against a local chain and against devnet; those scripts are not part of this repo.
+- There are no automated tests for the frontend in this repo. It was checked by driving the real screens in a headless browser, against a local chain and against devnet; those scripts are not part of this repo. Every feature above was verified that way, along with an axe-core accessibility audit of every screen and a check that nothing scrolls sideways at phone width.
 - The AI copilot's live-fallback templates only cover its three fixed questions; a freely-typed question that fails gets an honest "temporarily unavailable" message instead.
 - Purchase-band distribution (small/medium/large) isn't available to the AI copilot — the exact band is discarded once a receipt is claimed, by design, for customer privacy.
 - A customer can set their own display name to any text, and names are passed to the AI copilot. The worst this can do is change the wording of an answer only that merchant sees.
 - The voucher and card NFTs' metadata links point at small pages (`/v/<mint>`, `/c/<mint>`) that return a description and a picture (`public/nft/passdari-voucher.png`, `passdari-card.png`). It is one picture for all vouchers and one for all cards, with no business name on it, and this app serves it, so it depends on the app staying up. Ownership itself stays on-chain.
 - Lists refresh by checking every few seconds (the presented-voucher lists), not by subscription.
-- **Anyone can make a merchant account, and the relayer pays for it.** The relay will co-sign `register_business` for any wallet, and each business keeps its rent for good, so someone could create many businesses at the relayer's expense. The per-IP rate limit slows this down but doesn't stop it. Planned fix: only approved merchant wallets get relayed registrations, and the relayer gets a daily SOL budget cap. Until then, treat relayer spending as uncapped.
+- **Anyone can make a merchant account, and the relayer pays for it.** The relay will co-sign `register_business` for any wallet, so someone could create many businesses at the relayer's expense. A business's rent can now be reclaimed once it has finished trading (`close_business`), but only long after the fact, and nothing stops the registrations in the first place. The per-IP rate limit slows this down but doesn't stop it. Planned fix: only approved merchant wallets get relayed registrations, and the relayer gets a daily SOL budget cap. **This is the largest remaining hole; treat relayer spending as uncapped until it is closed.**
+- **The 15-a-minute per-IP relay limit will throttle a busy shop.** Customers using the shop's own wifi all share one address. It is not a problem at today's size and is a certainty at a few hundred customers a shop.
+- **The per-wallet transfer cap bounds one person, not everyone.** Ten a day is 0.003 SOL a month per wallet; if every wallet maxed it out at fifty thousand cards that would be 150 SOL a month. The global daily budget cap above is the real backstop.
+- **The devnet directory contains test data.** Roughly fifty shops are leftovers from end-to-end test runs, and they cannot be removed: nothing could close a business account until recently, and their owner keys were random and discarded. Real demo shops rank above them by activity, so they sit below the fold.
 - **The browser-side Helius RPC URL is public.** `NEXT_PUBLIC_HELIUS_RPC_URL` is compiled into the page, so its API key is visible to anyone who loads the site. It is a read-only RPC key and can't move funds, but someone could use up its quota. Replace it with a restricted key for the browser when there's time.
+
+## What changed recently
+
+- **A public shop directory** on the home page and at `/businesses`, server-rendered
+  with a sitemap and structured data, plus category pages. Shops' categories are now
+  a fixed list: when it was a free text box, one kind of shop ended up split across
+  four spellings with a quarter of the shops behind each.
+- **"Take this wallet with you"** — the one place a customer learns the account is a
+  Solana wallet they can open anywhere.
+- **Passing stamps to a friend,** with a pre-send check on the recipient and a
+  warning when you are sending more than they need.
+- **Staying signed in across a reload,** and a customer page that keeps itself
+  current instead of needing one.
+- **A merchant form for the reward terms,** including the date an offer runs until.
+- **Cheaper cards.** The separate per-NFT rent record is gone (it cost 858,520
+  lamports to hold 32 useful bytes), the NFT's on-chain name and link are shorter,
+  and a card created today holds about 0.00107 SOL less than before.
+- **Everything can be closed now.** `close_dead_card` and `close_business` return the
+  last two kinds of rent that were permanently stranded.
+- **A security hole closed:** a shop could set "stamps needed" to zero, which let one
+  stamp buy reward after reward at the relayer's expense. Settings are validated now.
 
 ## The relayer's operational story
 

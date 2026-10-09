@@ -1468,6 +1468,14 @@
       ],
       "args": [
         {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "category",
+          "type": "string"
+        },
+        {
           "name": "reward_label",
           "type": "string"
         },
@@ -1706,6 +1714,51 @@
       "code": 6024,
       "name": "CardAlreadyMigrated",
       "msg": "This card has already been migrated"
+    },
+    {
+      "code": 6025,
+      "name": "BusinessNameRequired",
+      "msg": "The business needs a name"
+    },
+    {
+      "code": 6026,
+      "name": "BusinessNameTooLong",
+      "msg": "That business name is too long"
+    },
+    {
+      "code": 6027,
+      "name": "CategoryTooLong",
+      "msg": "That category is too long"
+    },
+    {
+      "code": 6028,
+      "name": "RewardLabelRequired",
+      "msg": "The reward needs a name"
+    },
+    {
+      "code": 6029,
+      "name": "RewardLabelTooLong",
+      "msg": "That reward name is too long"
+    },
+    {
+      "code": 6030,
+      "name": "CurrencyTooLong",
+      "msg": "That currency code is too long"
+    },
+    {
+      "code": 6031,
+      "name": "StampsRequiredTooLow",
+      "msg": "A card must need at least one stamp"
+    },
+    {
+      "code": 6032,
+      "name": "StampsRequiredTooHigh",
+      "msg": "That is too many stamps to ask for"
+    },
+    {
+      "code": 6033,
+      "name": "ReceiptTtlOutOfRange",
+      "msg": "A receipt must last between a minute and a day"
     }
   ],
   "types": [

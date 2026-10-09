@@ -8,16 +8,15 @@ import { useCustomerProgram } from "@/lib/customerProgram";
 import { RegisterBusinessForm } from "@/components/RegisterBusinessForm";
 import { MerchantDashboard } from "@/components/MerchantDashboard";
 import { TopCustomers } from "@/components/TopCustomers";
-import { Button } from "@/components/ui/Button";
 import { NewSaleForm } from "@/components/NewSaleForm";
 import { PresentedVouchers } from "@/components/PresentedVouchers";
 import { MerchantCopilot } from "@/components/MerchantCopilot";
 import { Housekeeping } from "@/components/Housekeeping";
 import { AuthPanel } from "@/components/AuthPanel";
 import { AccountBar } from "@/components/AccountBar";
+import { EditBusinessForm } from "@/components/EditBusinessForm";
 import { MnemonicNotice } from "@/components/MnemonicNotice";
 
-const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
 export default function MerchantPage() {
   const [username, setUsername] = useState("");
@@ -122,33 +121,6 @@ export default function MerchantPage() {
     setMyBusiness("checking");
   }
 
-  async function handleLowerThreshold() {
-    if (!program || !keypair || !myBusiness || myBusiness === "checking") return;
-
-    const [businessPda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("business"), keypair.publicKey.toBuffer()],
-      program.programId
-    );
-
-    const tx = await program.methods
-      .updateBusinessConfig(myBusiness.rewardLabel, 1, myBusiness.minPurchaseAmount, myBusiness.receiptTtlSeconds)
-      .accounts({ business: businessPda, authority: keypair.publicKey })
-      .transaction();
-
-    tx.feePayer = RELAYER_PUBLIC_KEY;
-    const { blockhash } = await program.provider.connection.getLatestBlockhash();
-    tx.recentBlockhash = blockhash;
-    tx.partialSign(keypair);
-
-    const serialized = tx.serialize({ requireAllSignatures: false }).toString("base64");
-    await fetch("/api/relay", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transaction: serialized }),
-    });
-
-    checkForBusiness();
-  }
 
   return (
     <div className="text-charcoal flex flex-col items-center py-8 px-4 gap-6">
@@ -217,14 +189,12 @@ export default function MerchantPage() {
             <div className="flex flex-col gap-6">
               <TopCustomers program={program} keypair={keypair} refreshKey={refreshKey} />
               <Housekeeping keypair={keypair} />
-              <details className="text-sm text-muted">
-                <summary className="cursor-pointer select-none py-1 hover:text-ink">Demo tools</summary>
-                <div className="mt-2">
-                  <Button variant="outline" size="sm" onClick={handleLowerThreshold}>
-                    Lower reward threshold to 1
-                  </Button>
-                </div>
-              </details>
+              <EditBusinessForm
+                program={program}
+                keypair={keypair}
+                business={myBusiness}
+                onSaved={() => checkForBusiness(true)}
+              />
             </div>
           </div>
 

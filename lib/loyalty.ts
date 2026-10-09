@@ -1474,6 +1474,14 @@ export type Loyalty = {
       ],
       "args": [
         {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "category",
+          "type": "string"
+        },
+        {
           "name": "rewardLabel",
           "type": "string"
         },
@@ -1712,6 +1720,51 @@ export type Loyalty = {
       "code": 6024,
       "name": "cardAlreadyMigrated",
       "msg": "This card has already been migrated"
+    },
+    {
+      "code": 6025,
+      "name": "businessNameRequired",
+      "msg": "The business needs a name"
+    },
+    {
+      "code": 6026,
+      "name": "businessNameTooLong",
+      "msg": "That business name is too long"
+    },
+    {
+      "code": 6027,
+      "name": "categoryTooLong",
+      "msg": "That category is too long"
+    },
+    {
+      "code": 6028,
+      "name": "rewardLabelRequired",
+      "msg": "The reward needs a name"
+    },
+    {
+      "code": 6029,
+      "name": "rewardLabelTooLong",
+      "msg": "That reward name is too long"
+    },
+    {
+      "code": 6030,
+      "name": "currencyTooLong",
+      "msg": "That currency code is too long"
+    },
+    {
+      "code": 6031,
+      "name": "stampsRequiredTooLow",
+      "msg": "A card must need at least one stamp"
+    },
+    {
+      "code": 6032,
+      "name": "stampsRequiredTooHigh",
+      "msg": "That is too many stamps to ask for"
+    },
+    {
+      "code": 6033,
+      "name": "receiptTtlOutOfRange",
+      "msg": "A receipt must last between a minute and a day"
     }
   ],
   "types": [

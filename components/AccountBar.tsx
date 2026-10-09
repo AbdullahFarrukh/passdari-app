@@ -1,5 +1,6 @@
 "use client";
 
+import type { Keypair } from "@solana/web3.js";
 import { Button } from "@/components/ui/Button";
 import { KeyMark } from "@/components/ui/KeyMark";
 import { OnChainId } from "@/components/ui/OnChainId";
@@ -10,7 +11,8 @@ import { WalletGraduation } from "@/components/WalletGraduation";
 // Who is signed in: a picture made from the wallet address, the username, the address (copyable, with an
 // Explorer link) and sign out. "About your wallet" explains what that address really is, and "Take this
 // wallet with you" is how someone moves it into a wallet app of their own. Both stay shut until asked for.
-export function AccountBar({ username, address, accountKind, onSignOut }: {
+export function AccountBar({ keypair, username, address, accountKind, onSignOut }: {
+  keypair: Keypair;
   username: string;
   address: string;
   accountKind: "customer" | "merchant";
@@ -34,7 +36,7 @@ export function AccountBar({ username, address, accountKind, onSignOut }: {
         </summary>
         <div className="mt-3"><WalletExplainer heading="This is a real Solana wallet, and only you hold the key" /></div>
       </details>
-      <WalletGraduation username={username} address={address} accountKind={accountKind} />
+      <WalletGraduation keypair={keypair} username={username} address={address} accountKind={accountKind} />
     </div>
   );
 }

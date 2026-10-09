@@ -127,3 +127,61 @@ export async function findHolders(
     })
   );
 }
+
+export type WalletToken = {
+  mint: PublicKey;
+  /// The name stored inside the mint itself, which is what a wallet app will show.
+  name: string;
+  symbol: string;
+  /// Stamp cards are non-transferable; rewards are not.
+  soulbound: boolean;
+};
+
+/**
+ * Everything this wallet holds from this app — stamp cards and rewards alike.
+ *
+ * `listHeldNfts` above deliberately leaves the soulbound stamp cards out, because it exists to find
+ * vouchers. This one keeps them, because the point here is to show someone the real contents of their
+ * own wallet: exactly what Phantom would list if they opened it there.
+ *
+ * Two batched calls, and the names come straight out of the parsed mint — the metadata lives inside the
+ * token, so there is nothing else to look up.
+ */
+export async function listWalletTokens(
+  connection: Connection,
+  owner: PublicKey
+): Promise<WalletToken[]> {
+  const { value } = await connection.getParsedTokenAccountsByOwner(owner, {
+    programId: TOKEN_2022_PROGRAM_ID,
+  });
+
+  const held = value.filter(({ account }) => {
+    const info = account.data.parsed.info;
+    return info.tokenAmount.decimals === 0 && info.tokenAmount.amount === "1";
+  });
+  if (held.length === 0) return [];
+
+  const mints = held.map(({ account }) => new PublicKey(account.data.parsed.info.mint));
+  const tokens: WalletToken[] = [];
+  // The RPC takes at most 100 addresses at a time.
+  for (let i = 0; i < mints.length; i += 100) {
+    const slice = mints.slice(i, i + 100);
+    const { value: infos } = await connection.getMultipleParsedAccounts(slice);
+    infos.forEach((info, n) => {
+      if (!info || Buffer.isBuffer(info.data)) return;
+      const extensions = (info.data.parsed?.info?.extensions ?? []) as {
+        extension: string;
+        state?: { name?: string; symbol?: string };
+      }[];
+      const metadata = extensions.find((e) => e.extension === "tokenMetadata")?.state;
+      tokens.push({
+        mint: slice[n],
+        name: metadata?.name ?? "Passdari token",
+        symbol: metadata?.symbol ?? "",
+        soulbound: extensions.some((e) => e.extension === "nonTransferable"),
+      });
+    });
+  }
+  // Stamp cards first: they are the thing someone is most likely to recognise.
+  return tokens.sort((a, b) => Number(b.soulbound) - Number(a.soulbound) || a.name.localeCompare(b.name));
+}

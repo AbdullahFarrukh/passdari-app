@@ -140,7 +140,7 @@ export default function MerchantPage() {
       )}
 
       {keypair && (
-        <AccountBar username={username} address={keypair.publicKey.toBase58()} accountKind="merchant" onSignOut={handleSignOut} />
+        <AccountBar keypair={keypair} username={username} address={keypair.publicKey.toBase58()} accountKind="merchant" onSignOut={handleSignOut} />
       )}
 
       {newMnemonic && <MnemonicNotice phrase={newMnemonic} onDismiss={() => setNewMnemonic(null)} />}

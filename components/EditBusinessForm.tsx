@@ -11,12 +11,11 @@ import { Receipt } from "@/components/ui/Receipt";
 
 const RELAYER_PUBLIC_KEY = new PublicKey("5Yb1XxssgZuPd4qZMSWADHBZZXdM1vZ6kJpuYgmrVR4e");
 
-// The same fixed list the registration form offers, so the public directory keeps grouping shops
-// together instead of splitting one kind across four spellings.
-const CATEGORIES = ["Cafe", "Restaurant", "Fast food", "Bakery", "Grocery", "Pharmacy", "Salon", "Clothing", "Other"];
-
-// Everything a merchant filled in when they registered, changeable afterwards. Shut by default: these
-// are the shop's terms, not a thing to fiddle with between customers.
+// The terms of the reward, and only those. The shop's name and category are its identity, not its
+// offer: the name is written into every card and voucher NFT when it is minted and never rewritten, so
+// changing it would leave tokens in customers' wallets naming a shop that no longer calls itself that.
+// Both are fixed at registration. Shut by default — these are the shop's terms, not something to
+// adjust between customers.
 export function EditBusinessForm({
   program,
   keypair,
@@ -27,7 +26,6 @@ export function EditBusinessForm({
   keypair: Keypair;
   business: {
     name: string;
-    category: string;
     rewardLabel: string;
     stampsRequired: number;
     minPurchaseAmount: BN | number;
@@ -35,10 +33,6 @@ export function EditBusinessForm({
   };
   onSaved: () => void;
 }) {
-  const [name, setName] = useState(business.name);
-  const [category, setCategory] = useState(
-    CATEGORIES.includes(business.category) ? business.category : "Other"
-  );
   const [rewardLabel, setRewardLabel] = useState(business.rewardLabel);
   const [stampsRequired, setStampsRequired] = useState(Number(business.stampsRequired));
   const [minPurchasePkr, setMinPurchasePkr] = useState(Number(business.minPurchaseAmount.toString()) / 100);
@@ -59,8 +53,6 @@ export function EditBusinessForm({
 
       const tx = await program.methods
         .updateBusinessConfig(
-          name.trim(),
-          category,
           rewardLabel.trim(),
           stampsRequired,
           new BN(Math.round(minPurchasePkr * 100)),
@@ -96,27 +88,17 @@ export function EditBusinessForm({
   return (
     <details className="group" onToggle={(e) => { if (!(e.currentTarget as HTMLDetailsElement).open) { setError(null); setSaved(false); } }}>
       <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 px-1 py-1 font-mono text-xs uppercase tracking-wide text-muted hover:text-ink">
-        <span aria-hidden="true" className="inline-block transition-transform group-open:rotate-90">›</span> Change your shop&apos;s details
+        <span aria-hidden="true" className="inline-block transition-transform group-open:rotate-90">›</span> Change your reward
       </summary>
 
       <div className="mt-2">
         <Receipt className="px-5 pb-4 pt-5">
           <p className="text-sm text-muted">
-            These are the terms new customers see. Cards already being collected keep the number of
-            stamps they were started with, so nobody part-way through loses their progress.
+            These are the terms new customers see. <b>{business.name}</b> and its category can&apos;t be
+            changed — they are printed into every card and reward already in someone&apos;s wallet.
           </p>
 
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="edit-name" className="eyebrow">Business name</label>
-              <input id="edit-name" className="field" maxLength={32} value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="edit-category" className="eyebrow">Category</label>
-              <select id="edit-category" className="field" value={category} onChange={(e) => setCategory(e.target.value)}>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="edit-reward" className="eyebrow">Reward label</label>
               <input id="edit-reward" className="field" maxLength={32} value={rewardLabel} onChange={(e) => setRewardLabel(e.target.value)} />
@@ -140,13 +122,21 @@ export function EditBusinessForm({
 
           {stampsChanged && (
             <p className="mt-3 rounded-lg border-2 border-dashed border-stamp-blue bg-surface px-3 py-2 text-sm text-ink">
-              Changing this from {Number(business.stampsRequired)} to {stampsRequired} applies to cards started
-              from now on. Customers already collecting keep the {Number(business.stampsRequired)} they began with.
+              Going from {Number(business.stampsRequired)} stamps to {stampsRequired} applies to cards started from
+              now on. Anyone already collecting keeps the {Number(business.stampsRequired)} they began with, so
+              nobody part-way through loses their progress.
+            </p>
+          )}
+          {rewardLabel.trim() !== business.rewardLabel && (
+            <p className="mt-3 rounded-lg border-2 border-dashed border-stamp-red bg-surface px-3 py-2 text-sm text-ink">
+              Renaming the reward changes it for <b>everyone</b>, including customers part-way through a card.
+              Someone collecting for &ldquo;{business.rewardLabel}&rdquo; will receive
+              &ldquo;{rewardLabel.trim()}&rdquo; when they cash in. Rewards already claimed keep their old name.
             </p>
           )}
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Button onClick={handleSave} disabled={saving || !name.trim() || !rewardLabel.trim()}>
+            <Button onClick={handleSave} disabled={saving || !rewardLabel.trim()}>
               {saving ? "Saving…" : "Save changes"}
             </Button>
             {saved && !error && <span className="text-sm font-medium text-ink" role="status">Saved.</span>}

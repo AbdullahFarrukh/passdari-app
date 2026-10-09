@@ -1468,14 +1468,6 @@
       ],
       "args": [
         {
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "name": "category",
-          "type": "string"
-        },
-        {
           "name": "reward_label",
           "type": "string"
         },

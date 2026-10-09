@@ -1474,14 +1474,6 @@ export type Loyalty = {
       ],
       "args": [
         {
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "name": "category",
-          "type": "string"
-        },
-        {
           "name": "rewardLabel",
           "type": "string"
         },

@@ -254,6 +254,42 @@ Set `CRON_SECRET` before or right after the first deploy, so the daily clean-up 
 - **The devnet directory contains test data.** Roughly fifty shops are leftovers from end-to-end test runs, and they cannot be removed: nothing could close a business account until recently, and their owner keys were random and discarded. Real demo shops rank above them by activity, so they sit below the fold.
 - **The browser-side Helius RPC URL is public.** `NEXT_PUBLIC_HELIUS_RPC_URL` is compiled into the page, so its API key is visible to anyone who loads the site. It is a read-only RPC key and can't move funds, but someone could use up its quota. Replace it with a restricted key for the browser when there's time.
 
+## Before mainnet
+
+Devnet SOL is not money, so none of the below matters yet. All of it matters the
+day it does.
+
+**1. Fix the search surface.** The directory was built for discovery and for
+E-E-A-T — Google's Experience, Expertise, Authoritativeness and Trustworthiness
+framework — and only half of that shipped:
+
+- **There is no page per shop.** Only `/businesses` and `/businesses/<category>`
+  exist. The canonical unit of `LocalBusiness` structured data is one page per
+  business with its own stable URL, and that is the thing E-E-A-T actually rests
+  on: a page a shop can own, link to and be found by. Right now the home page
+  emits `LocalBusiness` entries that have nowhere to point.
+- **The sitemap is submitting test data to Google.** Live today it lists
+  `/businesses/ff`, `/businesses/test` and `/businesses/baker` — categories that
+  exist only because of end-to-end test runs. Indexing those *lowers* the quality
+  signal E-E-A-T measures, so this is worse than having no sitemap at all. It needs
+  a floor (a category with real activity, or an allow-list) before any crawler is
+  pointed at the site.
+
+Both are small. Do them before a real shop is listed, not after, because what gets
+indexed first is what gets judged.
+
+**2. Cap who the relayer pays for.** Anyone can register unlimited businesses at
+the relayer's expense — see "Known limitations". Approved merchant wallets plus a
+daily SOL budget cap. This is the largest live hole.
+
+**3. Get the program audited, and move the upgrade authority to a multisig.** The
+program has never had an outside review, and today one key can rewrite its rules —
+which undercuts the whole "the terms are on-chain and can't be quietly changed"
+claim. See the program repo's README.
+
+**4. Re-measure the rent.** Every figure in this repo and the program's README was
+measured on devnet, whose rent rate is not mainnet's. The multiplier is about 1.37x.
+
 ## What changed recently
 
 - **A public shop directory** on the home page and at `/businesses`, server-rendered

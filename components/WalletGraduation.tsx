@@ -82,7 +82,7 @@ export function WalletGraduation({
         <span aria-hidden="true" className="inline-block transition-transform group-open:rotate-90">›</span> Take this wallet with you
       </summary>
 
-      <div className="mt-3 rounded-2xl border-2 border-line bg-surface p-5 shadow-[0_10px_24px_rgba(17,17,17,.14)]">
+      <div className="mt-3 rounded-2xl border-2 border-line bg-surface p-5 shadow-[0_16px_32px_rgba(0,0,0,.5)]">
         <p className="max-w-2xl text-sm text-ink">
           This wallet is yours, not Passdari&apos;s. The same 12 words open it in Phantom, Solflare or any
           other Solana wallet — and what you have collected is already inside it.

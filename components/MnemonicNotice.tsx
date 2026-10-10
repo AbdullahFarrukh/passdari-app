@@ -10,7 +10,7 @@ export function MnemonicNotice({ phrase, onDismiss }: { phrase: string; onDismis
   const words = phrase.trim().split(/\s+/);
   return (
     <section aria-labelledby="mnemonic-title"
-      className="w-full max-w-6xl rounded-2xl border-[3px] border-dashed border-stamp-red bg-surface p-5 shadow-[0_10px_24px_rgba(17,17,17,.14)] sm:p-6">
+      className="w-full max-w-6xl rounded-2xl border-[3px] border-dashed border-stamp-red bg-surface p-5 shadow-[0_16px_32px_rgba(0,0,0,.5)] sm:p-6">
       <div className="flex items-center gap-2.5 text-stamp-red">
         <KeyIcon size={24} />
         <h2 id="mnemonic-title" className="text-2xl sm:text-3xl">Write these 12 words down now</h2>

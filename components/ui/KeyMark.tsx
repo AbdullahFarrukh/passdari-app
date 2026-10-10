@@ -1,6 +1,8 @@
 // A small picture made from a wallet address, so "your key" is something you can recognise at a glance
 // (the same address always gives the same picture). Purely decorative: the address itself is always shown next to it.
-const COLOURS = ["#111111", "#B81C0D", "#1B39FF", "#146C2E"];
+// These need to actually show up against bg-paper-2 (now a dark raised surface) — the old set
+// (near-black plus three dark accents) would barely register against it.
+const COLOURS = ["#ECEFF5", "#FF5A5A", "#3D5CFF", "#35D68C"];
 
 function seededRandom(seed: number) {
   let s = seed >>> 0;

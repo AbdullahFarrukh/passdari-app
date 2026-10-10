@@ -74,7 +74,7 @@ export function MerchantCopilot({ keypair }: { keypair: Keypair }) {
                 <p className="mb-1 text-sm text-muted">Try one of these:</p>
                 {SUGGESTED_QUESTIONS.map((q) => (
                   <button key={q} type="button" onClick={() => ask(q)}
-                    className="min-h-10 rounded-[10px] border-2 border-ink bg-paper px-3 py-2 text-left text-sm font-medium hover:bg-paper-2">
+                    className="min-h-10 rounded-[10px] border-2 border-line-strong bg-paper-2 px-3 py-2 text-left text-sm font-medium text-ink hover:bg-[#2A3140]">
                     {q}
                   </button>
                 ))}
@@ -110,7 +110,7 @@ export function MerchantCopilot({ keypair }: { keypair: Keypair }) {
 
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
         aria-label={open ? "Close copilot" : "Open copilot"}
-        className="flex size-14 items-center justify-center rounded-full bg-ink text-paper shadow-lg hover:bg-ink-deep">
+        className="flex size-14 items-center justify-center rounded-full bg-stamp-blue text-white shadow-lg shadow-black/40 hover:bg-stamp-blue-deep">
         <ChatIcon size={24} />
       </button>
     </div>

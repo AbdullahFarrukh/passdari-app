@@ -322,13 +322,17 @@ export default async function HomePage() {
 
       <StatsBand businesses={businesses} />
 
-      <section className="bg-ink text-paper">
+      {/* Used to be `bg-ink text-paper` — a dark band standing out against the yellow page around it.
+          The page is dark everywhere now, so this needed a different way to stand out: a raised panel,
+          same idea as StatsBand just above it, rather than a flip that no longer has anywhere to invert
+          from. */}
+      <section className="bg-[#0E1117]">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-14 sm:py-16">
-          <p className="font-mono text-sm font-semibold uppercase tracking-[.08em] text-paper">Verify it yourself</p>
-          <h2 className="text-balance text-[clamp(2.25rem,6vw,4.5rem)] font-extrabold uppercase leading-[0.98] text-paper">
+          <p className="font-mono text-sm font-semibold uppercase tracking-[.08em] text-[#5EE7FF]">Verify it yourself</p>
+          <h2 className="text-balance text-[clamp(2.25rem,6vw,4.5rem)] font-extrabold uppercase leading-[0.98] text-ink">
             Don&apos;t take our word for it
           </h2>
-          <p className="max-w-2xl text-lg text-[#F3F0B8]">
+          <p className="max-w-2xl text-lg text-white/70">
             Open the program on Solana Explorer, then look up any card, voucher or receipt address shown in the app. The data there is exactly what you see on screen.
           </p>
           <div className="mt-1"><OnChainId address={PROGRAM_ID} label="Program" full /></div>

@@ -60,7 +60,7 @@ export default async function BusinessesPage({
         />
         <button
           type="submit"
-          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-5 font-display text-sm font-extrabold uppercase tracking-wide text-paper hover:bg-ink-deep"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-stamp-blue px-5 font-display text-sm font-extrabold uppercase tracking-wide text-white hover:bg-stamp-blue-deep"
         >
           Search <ArrowRightIcon size={16} />
         </button>

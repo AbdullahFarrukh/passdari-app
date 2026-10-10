@@ -23,7 +23,10 @@ function BrandMark() {
 
 export function TopBar() {
   return (
-    <header className="bg-charcoal text-paper">
+    // A hairline border, same as Footer's own border-t: --charcoal and the page ground are both very
+    // dark now, close enough in value that the bar needs more than a background difference to read as
+    // a bar sitting on the page rather than fading into it.
+    <header className="border-b border-paper/10 bg-charcoal text-paper">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-2.5 sm:gap-x-3 sm:px-4">
         <Link href="/" className="flex items-center gap-2.5 font-display text-lg font-extrabold uppercase tracking-wider">
           <BrandMark />

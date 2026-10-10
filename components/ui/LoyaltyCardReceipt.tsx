@@ -51,7 +51,7 @@ export function LoyaltyCardReceipt({
             key={i}
             className={
               i < filled
-                ? `flex aspect-square items-center justify-center bg-ink text-paper ${i === filled - 1 ? "print-in" : ""}`
+                ? `flex aspect-square items-center justify-center bg-stamp-blue text-white ${i === filled - 1 ? "print-in" : ""}`
                 : "aspect-square border-2 border-dashed border-line-strong/60"
             }
           >

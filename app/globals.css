@@ -1,25 +1,39 @@
 @import "tailwindcss";
 
-/* Passdari: "the ledger, printed". A bright thermal-receipt counter under the stamp — fluorescent yellow
-   ground, black ink, white receipt paper, with stamp blue and alert red as the two accent inks. The
-   on-chain side of the app stays visible (addresses, network, wallet). All text colours below were
-   checked for at least 4.5:1 contrast against the surface they sit on. */
+/* Passdari: "the ledger, printed" — now on the night counter. The same receipt vocabulary (torn edges,
+   dotted leaders, Big Shoulders display, Martian Mono labels) carries over unchanged; what moved is the
+   ground and the card surfaces, from a fluorescent yellow counter with white paper to a near-black
+   counter with dark paper, stamp blue promoted from accent to primary colour. All text below was
+   checked for at least 4.5:1 contrast against the surface it sits on.
+
+   Two tokens could not just take a new value — their OLD value was doing two different jobs at once,
+   and inverting it blindly would have broken one of the two:
+     - --paper was always "the bright pole" in every component (text on a dark TopBar/Footer bar,
+       hover-hint), but body itself also painted its background from it directly — the one place it
+       meant "the ground," not "the bright pole." --paper keeps meaning "the bright pole" here (so it
+       stays light, same value as --ink); the ground gets its own literal value on `body` below instead.
+     - --ink was always "the main text colour" (108 uses), but a handful of elements also used
+       `bg-ink text-paper` to mean "the boldest fill available" — a pairing that only works because the
+       old --ink was dark. Once --ink turns light for its real job, that pairing inverts into a light
+       fill with light text. Those handful of spots (Button's primary variant, a filled stamp square,
+       LoyaltyCardReceipt, the merchant copilot's launcher, the businesses search button) were changed
+       by hand to `bg-stamp-blue` instead, rather than hunted for a token value that could serve both. */
 :root {
-  --paper: #FFE600;
-  --paper-2: #FFF176;
-  --surface: #FFFFFF;
-  --line: #111111;
-  --line-strong: #111111;
-  --ink: #111111;
-  --ink-deep: #000000;
-  --stamp-red: #B81C0D;
-  --stamp-red-deep: #8F1509;
-  --stamp-blue: #1B39FF;
-  --stamp-blue-deep: #132AC7;
-  --charcoal: #111111;
-  --muted: #4A4A44;
-  --verified: #146C2E;
-  --quiet-green: #0F5424;
+  --paper: #ECEFF5;
+  --paper-2: #232A38;
+  --surface: #171C25;
+  --line: rgba(236, 239, 245, .16);
+  --line-strong: rgba(236, 239, 245, .30);
+  --ink: #ECEFF5;
+  --ink-deep: #FFFFFF;
+  --stamp-red: #FF5A5A;
+  --stamp-red-deep: #B81C0D;
+  --stamp-blue: #3D5CFF;
+  --stamp-blue-deep: #1B39FF;
+  --charcoal: #0A0C10;
+  --muted: #8A93A6;
+  --verified: #35D68C;
+  --quiet-green: #146C2E;
 }
 
 @theme inline {
@@ -43,9 +57,12 @@
   --font-display: var(--font-display-face);
 }
 
+/* The page ground. Deliberately not `var(--paper)` — see the note above — and deliberately not
+   `var(--charcoal)` either, so the TopBar and Footer bars (bg-charcoal) still read as a bar sitting on
+   the page rather than disappearing into it. */
 body {
-  background: var(--paper);
-  color: var(--charcoal);
+  background: #05060A;
+  color: var(--ink);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
@@ -74,7 +91,10 @@ h1, h2, h3, h4 {
   background: var(--surface);
   color: var(--ink);
   border-radius: 0.875rem;
-  box-shadow: 0 10px 24px rgba(17, 17, 17, .16), 0 2px 4px rgba(17, 17, 17, .12);
+  /* A black shadow at light-theme opacity all but disappears under a dark card on a near-black ground —
+     dropped a lot darker and a little bigger, plus a hairline border, so the card still reads as lifted. */
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, .55), 0 3px 8px rgba(0, 0, 0, .4);
 }
 
 /* Form fields: 52px tall, a visible focus ring, placeholder text that is still readable. Mono, like
@@ -88,7 +108,7 @@ h1, h2, h3, h4 {
   padding: 0.5rem 0.75rem;
   font-family: var(--font-mono), monospace;
   font-size: 0.9375rem;
-  color: var(--charcoal);
+  color: var(--ink);
 }
 .field::placeholder { color: var(--muted); opacity: 0.75; }
 .field:focus-visible { outline: 3px solid var(--stamp-blue); outline-offset: 2px; border-color: var(--ink); }
@@ -111,12 +131,6 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
   outline: 3px solid var(--stamp-blue);
   outline-offset: 2px;
   border-radius: 0.375rem;
-}
-
-/* A faint printed texture behind the hero, on the yellow ground. */
-.ledger-lines {
-  background-image: linear-gradient(to bottom, transparent 31px, rgba(17, 17, 17, 0.07) 32px);
-  background-size: 100% 32px;
 }
 
 /* The torn edge of a receipt, top and bottom of a paper slip. Pairs with a flat-cornered (not

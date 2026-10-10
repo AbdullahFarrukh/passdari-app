@@ -6,7 +6,7 @@ export function Barcode({ bars, width, height }: { bars: number[]; width: number
   const gap = 3;
   let x = 0;
   const rects = bars.map((w, i) => {
-    const rect = <rect key={i} x={x} y={0} width={w} height={height} fill="#111111" />;
+    const rect = <rect key={i} x={x} y={0} width={w} height={height} fill="#ECEFF5" />;
     x += w + gap;
     return rect;
   });

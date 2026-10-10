@@ -1,8 +1,9 @@
 // A small picture made from a wallet address, so "your key" is something you can recognise at a glance
-// (the same address always gives the same picture). Purely decorative: the address itself is always shown next to it.
-// These need to actually show up against bg-paper-2 (now a dark raised surface) — the old set
-// (near-black plus three dark accents) would barely register against it.
-const COLOURS = ["#ECEFF5", "#FF5A5A", "#3D5CFF", "#35D68C"];
+// (the same address always gives the same picture). Purely decorative: the address itself is always
+// shown next to it. CSS var references rather than hex, so the four colours stay correct against
+// bg-paper-2 in both themes — a fixed hex set tuned for one theme (near-white, say) would disappear
+// against the other theme's paper-2 (pale yellow, not a near-black raised surface).
+const COLOURS = ["var(--ink)", "var(--stamp-red)", "var(--stamp-blue)", "var(--verified)"];
 
 function seededRandom(seed: number) {
   let s = seed >>> 0;

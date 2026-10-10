@@ -1,24 +1,47 @@
 @import "tailwindcss";
 
-/* Passdari: "the ledger, printed" — now on the night counter. The same receipt vocabulary (torn edges,
-   dotted leaders, Big Shoulders display, Martian Mono labels) carries over unchanged; what moved is the
-   ground and the card surfaces, from a fluorescent yellow counter with white paper to a near-black
-   counter with dark paper, stamp blue promoted from accent to primary colour. All text below was
-   checked for at least 4.5:1 contrast against the surface it sits on.
+/* Passdari: "the ledger, printed" — now in two lightings. The receipt vocabulary (torn edges, dotted
+   leaders, Big Shoulders display, Martian Mono labels) is identical in both; what changes is the ground
+   and the card surfaces. Light is the original counter: fluorescent yellow ground, black ink, white
+   paper. Dark is the night counter: near-black ground, dark paper, stamp blue promoted to primary.
+   Light is the default — `[data-theme="dark"]` on `<html>` (set by ThemeToggle, before paint, so there
+   is no flash of the other theme) switches every token below in one place. All text was checked for at
+   least 4.5:1 contrast against the surface it sits on, in both themes.
 
-   Two tokens could not just take a new value — their OLD value was doing two different jobs at once,
-   and inverting it blindly would have broken one of the two:
-     - --paper was always "the bright pole" in every component (text on a dark TopBar/Footer bar,
-       hover-hint), but body itself also painted its background from it directly — the one place it
-       meant "the ground," not "the bright pole." --paper keeps meaning "the bright pole" here (so it
-       stays light, same value as --ink); the ground gets its own literal value on `body` below instead.
-     - --ink was always "the main text colour" (108 uses), but a handful of elements also used
-       `bg-ink text-paper` to mean "the boldest fill available" — a pairing that only works because the
-       old --ink was dark. Once --ink turns light for its real job, that pairing inverts into a light
-       fill with light text. Those handful of spots (Button's primary variant, a filled stamp square,
-       LoyaltyCardReceipt, the merchant copilot's launcher, the businesses search button) were changed
-       by hand to `bg-stamp-blue` instead, rather than hunted for a token value that could serve both. */
+   Two tokens cannot just swap value between themes — in the light theme, their one value did two jobs
+   at once, and the dark theme needed to tell those jobs apart:
+     - --paper is "the bright pole" in every component (text on a dark TopBar/Footer bar, hover-hint) —
+       except on `body`, which paints its ground from --ground instead, a separate token. If body used
+       --paper directly, dark mode's --paper (light, for its real job) would make the whole page bright.
+     - --ink is "the main text colour" everywhere — except a handful of elements that used to read
+       `bg-ink text-paper` to mean "the boldest fill available", which only works while --ink is dark.
+       Those few spots (Button's primary variant, a filled stamp square, LoyaltyCardReceipt, the
+       merchant copilot's launcher, two search buttons) point at --stamp-blue directly instead, so they
+       don't care which way --ink is currently pointing.
+   See ThemeToggle.tsx and the inline script in layout.tsx for how `data-theme` gets set before hydration. */
 :root {
+  --ground: #FFE600;
+  --paper: #FFE600;
+  --paper-2: #FFF176;
+  --surface: #FFFFFF;
+  --line: #111111;
+  --line-strong: #111111;
+  --ink: #111111;
+  --ink-deep: #000000;
+  --stamp-red: #B81C0D;
+  --stamp-red-deep: #8F1509;
+  --stamp-blue: #1B39FF;
+  --stamp-blue-deep: #132AC7;
+  --accent-cyan: #1B39FF;
+  --charcoal: #111111;
+  --muted: #4A4A44;
+  --verified: #146C2E;
+  --quiet-green: #0F5424;
+  --card-shadow: 0 10px 24px rgba(17, 17, 17, .16), 0 2px 4px rgba(17, 17, 17, .12);
+}
+
+:root[data-theme="dark"] {
+  --ground: #05060A;
   --paper: #ECEFF5;
   --paper-2: #232A38;
   --surface: #171C25;
@@ -30,13 +53,17 @@
   --stamp-red-deep: #B81C0D;
   --stamp-blue: #3D5CFF;
   --stamp-blue-deep: #1B39FF;
+  --accent-cyan: #5EE7FF;
   --charcoal: #0A0C10;
   --muted: #8A93A6;
   --verified: #35D68C;
   --quiet-green: #146C2E;
+  /* A shadow at the light theme's opacity all but disappears under a dark card on a near-black ground. */
+  --card-shadow: 0 16px 32px rgba(0, 0, 0, .55), 0 3px 8px rgba(0, 0, 0, .4);
 }
 
 @theme inline {
+  --color-ground: var(--ground);
   --color-paper: var(--paper);
   --color-paper-2: var(--paper-2);
   --color-surface: var(--surface);
@@ -48,6 +75,7 @@
   --color-stamp-red-deep: var(--stamp-red-deep);
   --color-stamp-blue: var(--stamp-blue);
   --color-stamp-blue-deep: var(--stamp-blue-deep);
+  --color-accent-cyan: var(--accent-cyan);
   --color-charcoal: var(--charcoal);
   --color-muted: var(--muted);
   --color-verified: var(--verified);
@@ -57,11 +85,8 @@
   --font-display: var(--font-display-face);
 }
 
-/* The page ground. Deliberately not `var(--paper)` — see the note above — and deliberately not
-   `var(--charcoal)` either, so the TopBar and Footer bars (bg-charcoal) still read as a bar sitting on
-   the page rather than disappearing into it. */
 body {
-  background: #05060A;
+  background: var(--ground);
   color: var(--ink);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
@@ -91,10 +116,12 @@ h1, h2, h3, h4 {
   background: var(--surface);
   color: var(--ink);
   border-radius: 0.875rem;
-  /* A black shadow at light-theme opacity all but disappears under a dark card on a near-black ground —
-     dropped a lot darker and a little bigger, plus a hairline border, so the card still reads as lifted. */
+  box-shadow: var(--card-shadow);
+}
+:root[data-theme="dark"] .surface {
+  /* The dark theme's card also wants a hairline border — a shadow alone doesn't lift it off a ground
+     this close to the card's own colour the way it does against bright yellow. */
   border: 1px solid var(--line);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, .55), 0 3px 8px rgba(0, 0, 0, .4);
 }
 
 /* Form fields: 52px tall, a visible focus ring, placeholder text that is still readable. Mono, like
@@ -173,14 +200,47 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
   animation: stamp-print 0.5s cubic-bezier(.23, 1, .32, 1) both;
 }
 
-/* The dark sections introduced for the home page's hero, marquee, feature list and stats band — a
-   separate idea from the yellow counter above, used only where noted in app/page.tsx. The receipt
-   vocabulary (dotted leaders, torn edges, Big Shoulders / Martian Mono) carries over; the ground and
-   the card surfaces go dark instead of staying white paper, the way the rest of this app's cards do. */
-.hero-dark-glow {
-  background:
-    radial-gradient(ellipse 48% 60% at 50% 18%, rgba(61, 92, 255, .20) 0%, rgba(61, 92, 255, 0) 70%),
-    #0A0C10;
+/* The home page's hero ground. Light: the original faint printed texture on the yellow counter. Dark:
+   a soft blue glow on the night counter — a texture line would barely show on a ground this dark, so
+   it's a glow instead, not a one-to-one re-skin of the light version. */
+.hero-ground {
+  background-image: linear-gradient(to bottom, transparent 31px, rgba(17, 17, 17, 0.07) 32px);
+  background-size: 100% 32px;
+}
+:root[data-theme="dark"] .hero-ground {
+  background-image:
+    radial-gradient(ellipse 48% 60% at 50% 18%, rgba(61, 92, 255, .20) 0%, rgba(61, 92, 255, 0) 70%);
+  background-size: auto;
+}
+
+/* A band that interrupts the ground to stand out — used once, for "Where people are collecting" and
+   the stats band. Light: none, it just sits on the yellow page, the way the directory always has. Dark:
+   a raised panel, a shade off the main ground. --band-bg is exposed separately (not just read off
+   .band-raised) so the marquee's edge-fade gradient inside it can fade to the same colour instead of a
+   hardcoded one — transparent in light mode, which correctly becomes a no-op fade rather than a mask
+   that doesn't match anything, since there is no raised panel there to hide the edge of. */
+:root { --band-bg: transparent; }
+:root[data-theme="dark"] { --band-bg: #0E1117; }
+.band-raised { background: var(--band-bg); }
+
+/* The "verify it yourself" band: the one place in the whole app that inverts rather than just sitting
+   on a raised panel. Light: ink-black with paper-yellow text, the original dramatic treatment. Dark:
+   --ink and --paper are both light there, so inverting them would do nothing — it gets the same raised
+   panel as .band-raised instead, with the normal (now light) --ink text. */
+.band-invert { background: var(--ink); color: var(--paper); }
+:root[data-theme="dark"] .band-invert { background: var(--band-bg); color: var(--ink); }
+.band-invert-eyebrow { color: var(--paper); }
+:root[data-theme="dark"] .band-invert-eyebrow { color: var(--accent-cyan); }
+.band-invert-sub { color: var(--paper); opacity: .78; }
+:root[data-theme="dark"] .band-invert-sub { color: var(--ink); opacity: .7; }
+
+/* A small outlined tag in the accent colour — the category chip on a marquee slip. One rule instead of
+   inline arbitrary-value classes, because Tailwind cannot apply an opacity modifier to a var() colour
+   it can't introspect, so this needed a real border/colour pair rather than `border-[...]/35`. */
+.tag-accent {
+  color: var(--accent-cyan);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 999px;
 }
 
 /* The Gotas "moving border": a conic-gradient comet spinning behind a solid interior, clipped to a 1px
@@ -200,7 +260,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
   content: "";
   position: absolute;
   inset: -250%;
-  background: conic-gradient(from 0deg, transparent 0 70%, var(--stamp-blue) 90%, #5EE7FF 96%, transparent 100%);
+  background: conic-gradient(from 0deg, transparent 0 70%, var(--stamp-blue) 90%, var(--accent-cyan) 96%, transparent 100%);
   animation: glow-spin 3.8s linear infinite;
 }
 .glow-ring-content {

@@ -18,17 +18,17 @@ export function QrScanner({ onScan }: { onScan: (text: string) => void }) {
   return (
     <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-[#1E1E1A]">
       <video ref={ref} muted playsInline className="size-full object-cover opacity-90" />
-      {/* Fixed to a bright cyan rather than var(--paper): this viewfinder's background is always a dark
-          camera feed regardless of the app's own theme, so the guide needs a colour that stays visible
-          against that, not one that tracks the page's light/dark pole. Matches the same cyan the home
-          page's own scan demo uses for its corner brackets. */}
+      {/* --accent-cyan rather than var(--paper): this viewfinder's background is always a dark camera
+          feed regardless of the app's own theme, so the guide needs a colour that stays visible against
+          that specifically — which --accent-cyan does in both themes (it resolves to stamp blue in
+          light, to the brighter cyan in dark), without hardcoding one theme's value as a fixed hex. */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div className="relative size-[55%] max-w-48">
-          <span className="absolute left-0 top-0 size-7 border-l-[5px] border-t-[5px] border-[#5EE7FF]" />
-          <span className="absolute right-0 top-0 size-7 border-r-[5px] border-t-[5px] border-[#5EE7FF]" />
-          <span className="absolute bottom-0 left-0 size-7 border-b-[5px] border-l-[5px] border-[#5EE7FF]" />
-          <span className="absolute bottom-0 right-0 size-7 border-b-[5px] border-r-[5px] border-[#5EE7FF]" />
-          <span className="absolute inset-x-2 top-1/2 h-[3px] -translate-y-1/2 bg-[#5EE7FF] opacity-85" />
+          <span className="absolute left-0 top-0 size-7 border-l-[5px] border-t-[5px] border-[var(--accent-cyan)]" />
+          <span className="absolute right-0 top-0 size-7 border-r-[5px] border-t-[5px] border-[var(--accent-cyan)]" />
+          <span className="absolute bottom-0 left-0 size-7 border-b-[5px] border-l-[5px] border-[var(--accent-cyan)]" />
+          <span className="absolute bottom-0 right-0 size-7 border-b-[5px] border-r-[5px] border-[var(--accent-cyan)]" />
+          <span className="absolute inset-x-2 top-1/2 h-[3px] -translate-y-1/2 bg-[var(--accent-cyan)] opacity-85" />
         </div>
       </div>
       <p className="pointer-events-none absolute inset-x-0 bottom-2.5 text-center font-mono text-[10.5px] uppercase tracking-[.08em] text-white">

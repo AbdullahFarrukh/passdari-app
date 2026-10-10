@@ -9,6 +9,12 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 // Positions the stamp, the ink ripple and the ink specks by measuring the target square itself (not by
 // guessing pixel offsets), so it stays correct at any width without a second, hand-tuned layout for
 // narrow screens.
+//
+// Built from tokens (bg-surface, text-ink, --accent-cyan) rather than one fixed dark palette, so the
+// same component works under either theme. The one deliberate exception is the QR code itself: it stays
+// a fixed white screen with dark modules in both themes, matching the real, functional QR code
+// NewSaleForm generates elsewhere in the app — a QR code reads as "a QR code" because of that contrast
+// pattern, not because it happens to match the page around it.
 
 const STAMPS_REQUIRED = 10;
 const STAMPS_START = 7;
@@ -49,7 +55,7 @@ function QrMock() {
   return (
     <svg viewBox="0 0 21 21" shapeRendering="crispEdges" className="block h-full w-full">
       {QR_CELLS.flatMap((row, r) => row.map((on, c) => on && (
-        <rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill="#0A0C10" />
+        <rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill="#111111" />
       )))}
     </svg>
   );
@@ -136,21 +142,22 @@ export function HeroScanDemo() {
     idle: "Ready to scan", scanning: "Scanning…", read: "Code read",
     stamping: "Code read", done: "+1 stamp · on-chain",
   };
+  const statusColor = phase === "done" ? "var(--verified)" : phase === "idle" ? "var(--muted)" : "var(--accent-cyan)";
   const style = { "--hx": aim.x, "--hy": aim.y } as CSSProperties;
 
   return (
     <div ref={stageRef} className="relative mx-auto w-full max-w-sm" aria-hidden="true">
-      <div className="relative rounded-2xl border border-white/10 bg-[#171C25] shadow-[0_26px_44px_rgba(0,0,0,.55)]">
+      <div className="relative rounded-2xl border border-line bg-surface shadow-[var(--card-shadow)]">
         <div className={`relative px-6 pb-3.5 pt-5 ${phase === "stamping" ? "hero-card-thud" : ""}`}>
-          <p className="text-center font-mono text-[10.5px] tracking-[.15em] text-white/45">PASSDARI · LOYALTY CARD</p>
-          <p className="mt-2 text-center font-display text-4xl font-extrabold uppercase leading-none text-white">Blue Door Cafe</p>
-          <p className="mt-1.5 text-center font-mono text-[11px] uppercase text-[#5EE7FF]">Free coffee</p>
+          <p className="text-center font-mono text-[10.5px] tracking-[.15em] text-muted">PASSDARI · LOYALTY CARD</p>
+          <p className="mt-2 text-center font-display text-4xl font-extrabold uppercase leading-none text-ink">Blue Door Cafe</p>
+          <p className="mt-1.5 text-center font-mono text-[11px] uppercase text-[var(--accent-cyan)]">Free coffee</p>
 
-          <div className="mt-4 border-t border-dashed border-white/15 pt-4">
-            <div className="flex items-baseline gap-2 font-mono text-[11px] uppercase text-white/50">
+          <div className="mt-4 border-t border-dashed border-line pt-4">
+            <div className="flex items-baseline gap-2 font-mono text-[11px] uppercase text-muted">
               <span>Stamps</span>
-              <span className="-translate-y-0.5 min-w-3 flex-1 border-b border-dotted border-white/20" />
-              <span className="font-bold tabular-nums text-white">{count} / {STAMPS_REQUIRED}</span>
+              <span className="-translate-y-0.5 min-w-3 flex-1 border-b border-dotted border-line-strong" />
+              <span className="font-bold tabular-nums text-ink">{count} / {STAMPS_REQUIRED}</span>
             </div>
             <div className="my-3 grid grid-cols-5 gap-1.5">
               {Array.from({ length: STAMPS_REQUIRED }).map((_, i) => {
@@ -162,8 +169,8 @@ export function HeroScanDemo() {
                     ref={isTarget ? targetRef : undefined}
                     className={
                       filled
-                        ? `flex aspect-square items-center justify-center rounded-[3px] bg-[#3D5CFF] text-[#0A0C10] shadow-[0_0_12px_rgba(61,92,255,.45)] ${isTarget && stampedTarget ? "print-in" : ""}`
-                        : "aspect-square rounded-[3px] border border-dashed border-white/25"
+                        ? `flex aspect-square items-center justify-center rounded-[3px] bg-stamp-blue text-white shadow-[0_0_12px_rgba(61,92,255,.45)] ${isTarget && stampedTarget ? "print-in" : ""}`
+                        : "aspect-square rounded-[3px] border border-dashed border-line-strong"
                     }
                   >
                     {filled && <span className="w-[55%]">{CHECK}</span>}
@@ -174,14 +181,17 @@ export function HeroScanDemo() {
           </div>
 
           <div className="relative flex justify-center py-3.5">
-            <div className="relative h-[104px] w-[104px] rounded-md bg-[#1C222D] p-[7px]">
+            {/* Fixed white screen with dark modules, in both themes — the same reasoning as the real QR
+                code elsewhere in the app: it reads as "a QR code" because of that contrast, not because
+                it matches the surrounding card. */}
+            <div className="relative h-[104px] w-[104px] rounded-md border border-line bg-white p-[7px]">
               <QrMock />
-              <div className={`pointer-events-none absolute inset-0 rounded-md bg-[#5EE7FF] ${phase === "read" ? "hero-qr-flash" : "opacity-0"}`} />
+              <div className={`pointer-events-none absolute inset-0 rounded-md bg-stamp-blue ${phase === "read" ? "hero-qr-flash" : "opacity-0"}`} />
               {(["tl", "tr", "bl", "br"] as const).map((corner) => (
                 <span
                   key={corner}
                   className={[
-                    "absolute h-[17px] w-[17px] border-[2px] border-[#5EE7FF]",
+                    "absolute h-[17px] w-[17px] border-[2px] border-stamp-blue",
                     corner === "tl" && "-left-[5px] -top-[5px] rounded-tl-[4px] border-b-0 border-r-0",
                     corner === "tr" && "-right-[5px] -top-[5px] rounded-tr-[4px] border-b-0 border-l-0",
                     corner === "bl" && "-bottom-[5px] -left-[5px] rounded-bl-[4px] border-t-0 border-r-0",
@@ -193,17 +203,17 @@ export function HeroScanDemo() {
                 />
               ))}
               {phase === "scanning" && (
-                <div className="hero-scan-sweep absolute left-[-4px] right-[-4px] top-[2px] h-[2px] rounded-full bg-gradient-to-r from-transparent via-[#5EE7FF] to-transparent shadow-[0_0_14px_rgba(94,231,255,.85)]" />
+                <div className="hero-scan-sweep absolute left-[-4px] right-[-4px] top-[2px] h-[2px] rounded-full bg-gradient-to-r from-transparent via-stamp-blue to-transparent shadow-[0_0_14px_rgba(27,57,255,.7)]" />
               )}
             </div>
           </div>
 
-          <p className="flex min-h-4 items-center justify-center gap-1.5 text-center font-mono text-[9.5px] uppercase tracking-[.1em]" style={{ color: phase === "done" ? "#35D68C" : phase === "idle" ? "rgba(255,255,255,.45)" : "#5EE7FF" }}>
+          <p className="flex min-h-4 items-center justify-center gap-1.5 text-center font-mono text-[9.5px] uppercase tracking-[.1em]" style={{ color: statusColor }}>
             <span
               className="size-[5px] rounded-full"
               style={{
-                background: phase === "done" ? "#35D68C" : phase === "idle" ? "rgba(255,255,255,.45)" : "#5EE7FF",
-                boxShadow: phase === "idle" ? "none" : `0 0 7px ${phase === "done" ? "#35D68C" : "#5EE7FF"}`,
+                background: statusColor,
+                boxShadow: phase === "idle" ? "none" : `0 0 7px ${statusColor}`,
               }}
             />
             {statusText[phase]}
@@ -216,8 +226,8 @@ export function HeroScanDemo() {
         style={style}
         className={`absolute left-0 top-0 z-10 h-[50px] w-[84px] opacity-0 ${phase === "stamping" ? "hero-stamp-drop" : ""}`}
       >
-        <span className="absolute left-1/2 top-[-19px] h-[23px] w-[12px] -translate-x-1/2 rounded-t-[4px] rounded-b-[2px] bg-white/70" />
-        <span className="absolute inset-0 flex items-center justify-center rounded-md border-2 border-[#5EE7FF] bg-[#3D5CFF] font-display text-[13px] font-black uppercase tracking-wide text-white shadow-[0_0_24px_rgba(61,92,255,.6)]">
+        <span className="absolute left-1/2 top-[-19px] h-[23px] w-[12px] -translate-x-1/2 rounded-t-[4px] rounded-b-[2px] bg-ink/60" />
+        <span className="absolute inset-0 flex items-center justify-center rounded-md border-2 border-[var(--accent-cyan)] bg-stamp-blue font-display text-[13px] font-black uppercase tracking-wide text-white shadow-[0_0_24px_rgba(61,92,255,.6)]">
           Paid
         </span>
       </div>
@@ -234,7 +244,7 @@ export function HeroScanDemo() {
           <span
             key={i}
             style={{ ...style, "--dx": `${dx}px`, "--dy": `${dy}px` } as CSSProperties}
-            className={`pointer-events-none absolute left-0 top-0 z-[7] size-1 rounded-full bg-[#5EE7FF] opacity-0 ${phase === "stamping" ? "hero-speck-fly" : ""}`}
+            className={`pointer-events-none absolute left-0 top-0 z-[7] size-1 rounded-full bg-[var(--accent-cyan)] opacity-0 ${phase === "stamping" ? "hero-speck-fly" : ""}`}
           />
         );
       })}

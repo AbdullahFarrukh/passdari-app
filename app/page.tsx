@@ -67,22 +67,23 @@ function HowItWorksReceipt() {
 
 // One shop, printed small, for the scrolling row under the hero. Deliberately not BusinessSlip — that
 // is the full, detailed card used in the real directory grid below (and on /businesses); this is a
-// compact teaser, dark to match the sections around it, with its own stamped-count as the one number
-// worth showing at a glance.
+// compact teaser, its own stamped-count the one number worth showing at a glance. Built entirely from
+// tokens (bg-surface, text-ink, --accent-cyan) rather than one fixed palette, so it looks native in
+// either theme rather than carrying dark-mode colours into a light page.
 function MarqueeSlip({ business, rank }: { business: DirectoryBusiness; rank: number }) {
   return (
-    <div className="w-[200px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-[#171C25]">
+    <div className="w-[200px] shrink-0 overflow-hidden rounded-xl border border-line bg-surface">
       <div className="px-4 pb-3.5 pt-4">
-        <p className="font-mono text-[9px] text-white/40">#{rank}</p>
-        <span className="mt-1.5 inline-block rounded-full border border-[#5EE7FF]/35 px-2 py-[2px] font-mono text-[8.5px] uppercase tracking-wide text-[#5EE7FF]">
+        <p className="font-mono text-[9px] text-muted">#{rank}</p>
+        <span className="tag-accent mt-1.5 inline-block px-2 py-[2px] font-mono text-[8.5px] uppercase tracking-wide">
           {business.category}
         </span>
-        <p className="mt-2 truncate font-display text-xl font-extrabold uppercase leading-tight text-white">{business.name}</p>
-        <p className="mt-1 truncate font-mono text-[9px] uppercase text-white/45">{business.rewardLabel}</p>
-        <div className="mt-3 flex items-baseline gap-1.5 border-t border-dashed border-white/15 pt-2.5 font-mono text-[9.5px] uppercase text-white/45">
+        <p className="mt-2 truncate font-display text-xl font-extrabold uppercase leading-tight text-ink">{business.name}</p>
+        <p className="mt-1 truncate font-mono text-[9px] uppercase text-muted">{business.rewardLabel}</p>
+        <div className="mt-3 flex items-baseline gap-1.5 border-t border-dashed border-line pt-2.5 font-mono text-[9.5px] uppercase text-muted">
           <span>Stamps</span>
-          <span className="-translate-y-0.5 min-w-2 flex-1 border-b border-dotted border-white/20" />
-          <span className="font-bold tabular-nums text-white">{business.totalStampsIssued}</span>
+          <span className="-translate-y-0.5 min-w-2 flex-1 border-b border-dotted border-line-strong/60" />
+          <span className="font-bold tabular-nums text-ink">{business.totalStampsIssued}</span>
         </div>
       </div>
     </div>
@@ -96,8 +97,10 @@ function ShopMarquee({ shops }: { shops: DirectoryBusiness[] }) {
   if (shops.length < 4) return null;
   return (
     <div className="relative">
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-[2] w-16 bg-gradient-to-r from-[#0A0C10] to-transparent sm:w-24" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-[2] w-16 bg-gradient-to-l from-[#0A0C10] to-transparent sm:w-24" />
+      {/* Fades to --band-bg, the same variable .band-raised paints its own background from — in light
+          mode that's transparent, which is correct: there is no raised panel there to mask the edge of. */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-[2] w-16 bg-gradient-to-r from-[var(--band-bg)] to-transparent sm:w-24" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-[2] w-16 bg-gradient-to-l from-[var(--band-bg)] to-transparent sm:w-24" />
       <div className="marquee-viewport overflow-hidden">
         <div className="marquee-track flex w-max gap-4">
           {[...shops, ...shops].map((b, i) => (
@@ -112,7 +115,7 @@ function ShopMarquee({ shops }: { shops: DirectoryBusiness[] }) {
 // The real, functional directory: category links and the full BusinessSlip grid, unchanged from before —
 // still the exact shared component /businesses uses, so a shop looks the same wherever it is checked.
 function DirectoryGrid({ businesses }: { businesses: DirectoryBusiness[] }) {
-  const top = businesses.slice(0, 10);
+  const top = businesses.slice(0, 6);
   const categories = categoriesOf(businesses);
   const rest = businesses.length - top.length;
 
@@ -134,24 +137,23 @@ function DirectoryGrid({ businesses }: { businesses: DirectoryBusiness[] }) {
   };
 
   return (
-    // Full-bleed dark ground, same pattern as the marquee section above it (which this continues
-    // without a seam) — a constrained section here would leave its own background floating as a
-    // box in the middle of the yellow page instead of spanning it edge to edge.
-    <section className="bg-[#0A0C10] py-14 lg:py-16" aria-labelledby="directory">
+    // .band-raised: a raised panel in dark mode, transparent in light — in light mode this section
+    // just sits on the plain yellow page, the way the directory always has.
+    <section className="band-raised py-14 lg:py-16" aria-labelledby="directory">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(listing) }} />
       <div className="mx-auto max-w-6xl px-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="font-mono text-[10.5px] uppercase tracking-[.14em] text-white/50">Registered shops</p>
-            <h2 id="directory" className="mt-1 text-balance text-[clamp(2rem,5vw,4rem)] font-extrabold uppercase leading-[0.98] text-white">
+            <p className="font-mono text-[10.5px] uppercase tracking-[.14em] text-muted">Registered shops</p>
+            <h2 id="directory" className="mt-1 text-balance text-[clamp(2rem,5vw,4rem)] font-extrabold uppercase leading-[0.98] text-ink">
               Where people are collecting
             </h2>
-            <p className="mt-3 max-w-xl text-base text-white/75">
+            <p className="mt-3 max-w-xl text-base text-ink">
               Every shop below registered itself on Passdari. The stamps, rewards and customers are counted
               on Solana, so you can check any of these numbers yourself.
             </p>
           </div>
-          <Link href="/businesses" className="inline-flex min-h-11 items-center gap-2 rounded-full border-[2.5px] border-white px-5 font-display text-sm font-extrabold uppercase tracking-wide text-white hover:bg-white hover:text-[#0A0C10]">
+          <Link href="/businesses" className="inline-flex min-h-11 items-center gap-2 rounded-full border-[2.5px] border-ink px-5 font-display text-sm font-extrabold uppercase tracking-wide text-ink hover:bg-ink hover:text-ground">
             Search all shops <ArrowRightIcon size={16} />
           </Link>
         </div>
@@ -160,8 +162,8 @@ function DirectoryGrid({ businesses }: { businesses: DirectoryBusiness[] }) {
           <nav className="mt-6 flex flex-wrap gap-2" aria-label="Shop categories">
             {categories.map((c) => (
               <Link key={c.slug} href={`/businesses/${c.slug}`}
-                className="inline-flex items-center gap-1.5 rounded-[10px] border border-white/20 bg-white/5 px-3 py-1.5 font-mono text-xs uppercase tracking-wide text-white hover:border-white/50">
-                {c.name} <span className="text-white/45">{c.count}</span>
+                className="inline-flex items-center gap-1.5 rounded-[10px] border-2 border-line bg-surface px-3 py-1.5 font-mono text-xs uppercase tracking-wide text-ink hover:border-ink">
+                {c.name} <span className="text-muted">{c.count}</span>
               </Link>
             ))}
           </nav>
@@ -174,8 +176,8 @@ function DirectoryGrid({ businesses }: { businesses: DirectoryBusiness[] }) {
         </ul>
 
         {rest > 0 && (
-          <p className="mt-6 text-sm text-white/75">
-            <Link href="/businesses" className="font-bold text-white underline underline-offset-4">
+          <p className="mt-6 text-sm text-ink">
+            <Link href="/businesses" className="font-bold underline underline-offset-4">
               {rest} more {rest === 1 ? "shop" : "shops"}
             </Link>{" "}
             — search by name or pick a category above.
@@ -200,27 +202,27 @@ function StatsBand({ businesses }: { businesses: DirectoryBusiness[] }) {
     { n: redemptions, l: "Rewards redeemed" },
   ];
   return (
-    <section className="bg-[#0E1117] px-4 py-14 lg:py-16">
+    <section className="band-raised px-4 py-14 lg:py-16">
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-xl text-center">
-          <p className="font-mono text-[10.5px] uppercase tracking-[.16em] text-[#5EE7FF]">Not our word for it</p>
-          <h2 className="mt-2 text-balance text-[clamp(1.65rem,3.6vw,2.4rem)] font-extrabold uppercase leading-none text-white">
+          <p className="font-mono text-[10.5px] uppercase tracking-[.16em] text-[var(--accent-cyan)]">Not our word for it</p>
+          <h2 className="mt-2 text-balance text-[clamp(1.65rem,3.6vw,2.4rem)] font-extrabold uppercase leading-none text-ink">
             Counted on Solana, not by us
           </h2>
         </div>
-        <div className="mx-auto mt-9 grid max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-4">
+        <div className="mx-auto mt-9 grid max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-4">
           {stats.map((s) => (
-            <div key={s.l} className="bg-[#171C25] px-4 py-7 text-center">
-              <div className="font-display text-[clamp(2rem,4.6vw,3rem)] font-black leading-none tabular-nums text-white">{s.n}</div>
-              <div className="mt-2 font-mono text-[9.5px] uppercase tracking-wide text-white/50">{s.l}</div>
+            <div key={s.l} className="bg-surface px-4 py-7 text-center">
+              <div className="font-display text-[clamp(2rem,4.6vw,3rem)] font-black leading-none tabular-nums text-ink">{s.n}</div>
+              <div className="mt-2 font-mono text-[9.5px] uppercase tracking-wide text-muted">{s.l}</div>
             </div>
           ))}
         </div>
-        <p className="mx-auto mt-5 max-w-lg text-center text-sm text-white/55">
+        <p className="mx-auto mt-5 max-w-lg text-center text-sm text-muted">
           Read live from this app&apos;s own program on devnet — not a marketing round number. Each one is a{" "}
-          <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[.85em] text-white/75">totalStampsIssued</code> or{" "}
-          <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[.85em] text-white/75">totalRedemptions</code>{" "}
-          field on a real <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-[.85em] text-white/75">Business</code> account.
+          <code className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[.85em] text-ink">totalStampsIssued</code> or{" "}
+          <code className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[.85em] text-ink">totalRedemptions</code>{" "}
+          field on a real <code className="rounded bg-paper-2 px-1.5 py-0.5 font-mono text-[.85em] text-ink">Business</code> account.
         </p>
       </div>
     </section>
@@ -233,25 +235,25 @@ export default async function HomePage() {
 
   return (
     <div>
-      <section className="hero-dark-glow relative overflow-hidden">
+      <section className="hero-ground relative overflow-hidden">
         <div className="mx-auto max-w-6xl px-4 py-14 lg:py-20">
           <div className="grid items-center gap-14 lg:grid-cols-[1.12fr_0.88fr] lg:gap-14">
             <div>
-              <h1 className="text-balance text-[clamp(2.75rem,7vw,9rem)] font-extrabold uppercase leading-[0.88] text-white">
+              <h1 className="text-balance text-[clamp(2.75rem,7vw,9rem)] font-extrabold uppercase leading-[0.88] text-ink">
                 Stamp cards you actually own.
               </h1>
-              <p className="mt-5 max-w-xl text-lg text-white/80 sm:text-xl">
+              <p className="mt-5 max-w-xl text-lg text-ink sm:text-xl">
                 Passdari puts every stamp card and reward on Solana. Nothing to download, no wallet to install, and every stamp can be checked by anyone.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <Link href="/customer" className="inline-flex min-h-[52px] items-center gap-2.5 rounded-full bg-[#3D5CFF] px-7 font-display text-lg font-extrabold uppercase tracking-wide text-white shadow-[0_8px_22px_-8px_rgba(61,92,255,.6)] hover:bg-[#2847e6] sm:min-h-[60px] sm:text-2xl">
+                <Link href="/customer" className="inline-flex min-h-[52px] items-center gap-2.5 rounded-full bg-stamp-blue px-7 font-display text-lg font-extrabold uppercase tracking-wide text-white shadow-[0_8px_22px_-8px_rgba(61,92,255,.6)] hover:bg-stamp-blue-deep sm:min-h-[60px] sm:text-2xl">
                   <ArrowRightIcon size={20} /> I&apos;m a customer
                 </Link>
-                <Link href="/merchant" className="inline-flex min-h-[52px] items-center gap-2.5 rounded-full border-[2.5px] border-white px-7 font-display text-lg font-extrabold uppercase tracking-wide text-white hover:bg-white hover:text-[#0A0C10] sm:min-h-[60px] sm:text-2xl">
+                <Link href="/merchant" className="inline-flex min-h-[52px] items-center gap-2.5 rounded-full border-[2.5px] border-ink px-7 font-display text-lg font-extrabold uppercase tracking-wide text-ink hover:bg-ink hover:text-ground sm:min-h-[60px] sm:text-2xl">
                   I&apos;m a merchant
                 </Link>
               </div>
-              <p className="mt-4 text-sm text-white/60">No wallet app and no SOL needed. Just a username and password.</p>
+              <p className="mt-4 text-sm text-muted">No wallet app and no SOL needed. Just a username and password.</p>
             </div>
             <div className="mx-auto w-full max-w-sm lg:mx-0">
               <HeroScanDemo />
@@ -260,10 +262,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="bg-[#0A0C10] pb-2 pt-10 lg:pt-14">
+      <section className="band-raised pb-2 pt-10 lg:pt-14">
         <div className="mx-auto max-w-6xl px-4">
-          <p className="text-center font-mono text-[10.5px] uppercase tracking-[.16em] text-[#5EE7FF]">Registered shops</p>
-          <p className="mx-auto mt-2 max-w-md text-center text-sm text-white/55">
+          <p className="text-center font-mono text-[10.5px] uppercase tracking-[.16em] text-[var(--accent-cyan)]">Registered shops</p>
+          <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted">
             Real shops, ranked by stamps actually given — read straight off Solana.
           </p>
         </div>
@@ -322,17 +324,17 @@ export default async function HomePage() {
 
       <StatsBand businesses={businesses} />
 
-      {/* Used to be `bg-ink text-paper` — a dark band standing out against the yellow page around it.
-          The page is dark everywhere now, so this needed a different way to stand out: a raised panel,
-          same idea as StatsBand just above it, rather than a flip that no longer has anywhere to invert
-          from. */}
-      <section className="bg-[#0E1117]">
+      {/* Light: the original dramatic treatment, black band with yellow text (.band-invert resolves
+          that from --ink/--paper, which are still the near-black/yellow pair here). Dark: --ink and
+          --paper are both light, so inverting them would do nothing — a raised panel instead, same idea
+          as StatsBand just above. */}
+      <section className="band-invert">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-14 sm:py-16">
-          <p className="font-mono text-sm font-semibold uppercase tracking-[.08em] text-[#5EE7FF]">Verify it yourself</p>
-          <h2 className="text-balance text-[clamp(2.25rem,6vw,4.5rem)] font-extrabold uppercase leading-[0.98] text-ink">
+          <p className="band-invert-eyebrow font-mono text-sm font-semibold uppercase tracking-[.08em]">Verify it yourself</p>
+          <h2 className="text-balance text-[clamp(2.25rem,6vw,4.5rem)] font-extrabold uppercase leading-[0.98]">
             Don&apos;t take our word for it
           </h2>
-          <p className="max-w-2xl text-lg text-white/70">
+          <p className="band-invert-sub max-w-2xl text-lg">
             Open the program on Solana Explorer, then look up any card, voucher or receipt address shown in the app. The data there is exactly what you see on screen.
           </p>
           <div className="mt-1"><OnChainId address={PROGRAM_ID} label="Program" full /></div>

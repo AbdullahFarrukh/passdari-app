@@ -9,10 +9,9 @@ export function Receipt({ children, className = "" }: { children: ReactNode; cla
   return (
     <div className="relative">
       <div className="tear-t" />
-      {/* A shadow at the old light-theme opacity all but disappears under a dark card on a near-black
-          ground, so this is a lot darker and a little bigger than it was — same reasoning as .surface
-          in globals.css. */}
-      <div className={`bg-surface text-ink shadow-[0_16px_32px_rgba(0,0,0,.55),0_3px_8px_rgba(0,0,0,.4)] ${className}`}>
+      {/* --card-shadow carries its own light/dark value (see globals.css) — a shadow at the light
+          theme's opacity all but disappears under a dark card on the night counter. */}
+      <div className={`bg-surface text-ink shadow-[var(--card-shadow)] ${className}`}>
         {children}
       </div>
       <div className="tear-b" />

@@ -74,7 +74,7 @@ export function MerchantCopilot({ keypair }: { keypair: Keypair }) {
                 <p className="mb-1 text-sm text-muted">Try one of these:</p>
                 {SUGGESTED_QUESTIONS.map((q) => (
                   <button key={q} type="button" onClick={() => ask(q)}
-                    className="min-h-10 rounded-[10px] border-2 border-line-strong bg-paper-2 px-3 py-2 text-left text-sm font-medium text-ink hover:bg-[#2A3140]">
+                    className="min-h-10 rounded-[10px] border-2 border-line-strong bg-paper-2 px-3 py-2 text-left text-sm font-medium text-ink hover:bg-surface">
                     {q}
                   </button>
                 ))}

@@ -35,7 +35,7 @@ function SocialLink({ href, label, children }: { href: string; label: string; ch
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
       className="glow-ring rounded-xl">
-      <span className="glow-ring-content flex size-10 items-center justify-center rounded-xl bg-[#111111] text-paper transition-colors hover:bg-[#1c1c1c]">
+      <span className="glow-ring-content flex size-10 items-center justify-center rounded-xl bg-charcoal text-paper transition-colors hover:bg-[#1c1c1c]">
         {children}
       </span>
     </a>

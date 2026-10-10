@@ -22,6 +22,6 @@ export function Button({ variant = "primary", size = "md", className = "", type 
   ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }) {
   return (
     <button type={type} {...rest}
-      className={`inline-flex items-center justify-center gap-2 rounded-full font-display font-extrabold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:border-0 disabled:bg-[#2A2E38] disabled:text-muted ${VARIANTS[variant]} ${SIZES[size]} ${className}`} />
+      className={`inline-flex items-center justify-center gap-2 rounded-full font-display font-extrabold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:border-0 disabled:bg-paper-2 disabled:text-muted ${VARIANTS[variant]} ${SIZES[size]} ${className}`} />
   );
 }

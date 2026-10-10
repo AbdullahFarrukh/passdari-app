@@ -63,7 +63,7 @@ function rewardsEarned(card: { rewardsEarned: number }): number {
 }
 
 /**
- * Every registered shop, busiest first, each with its five most loyal customers.
+ * Every registered shop, busiest first, each with its three most loyal customers.
  *
  * This reads every business and every stamp card in one pass. That is the right shape while the whole
  * directory still fits comfortably in one request; if this ever grows to thousands of shops, the card
@@ -92,7 +92,7 @@ export async function getDirectory(): Promise<DirectoryBusiness[]> {
       const address = publicKey.toBase58();
       const topCustomers = (cardsByBusiness.get(address) ?? [])
         .sort((a, b) => b.rewards - a.rewards)
-        .slice(0, 5);
+        .slice(0, 3);
       return {
         address,
         owner: (account.authority as PublicKey).toBase58(),

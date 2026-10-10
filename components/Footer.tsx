@@ -42,18 +42,6 @@ function SocialLink({ href, label, children }: { href: string; label: string; ch
   );
 }
 
-// Not wired up yet. Shown anyway — so the footer's final shape is visible now rather than shifting
-// later — but honestly: a dashed border and `aria-disabled` instead of a live link, and no glow-ring,
-// because the ring means "this goes somewhere" and this one does not, yet.
-function SocialPending({ label }: { label: string }) {
-  return (
-    <span role="link" aria-disabled="true" aria-label={`${label} — link to come`} title="Link to come"
-      className="flex size-10 items-center justify-center rounded-xl border border-dashed border-paper/25 text-paper/50">
-      {label === "X" ? <XGlyph /> : <InstagramGlyph />}
-    </span>
-  );
-}
-
 export function Footer() {
   return (
     <footer className="border-t border-paper/10 bg-charcoal text-paper">
@@ -68,8 +56,12 @@ export function Footer() {
           <SocialLink href="https://github.com/AbdullahFarrukh/passdari" label="Passdari on GitHub">
             <GithubGlyph />
           </SocialLink>
-          <SocialPending label="X" />
-          <SocialPending label="Instagram" />
+          <SocialLink href="https://x.com/Passdari_Solana" label="Passdari on X">
+            <XGlyph />
+          </SocialLink>
+          <SocialLink href="https://www.instagram.com/passdari" label="Passdari on Instagram">
+            <InstagramGlyph />
+          </SocialLink>
         </div>
       </div>
       <div className="border-t border-paper/10">

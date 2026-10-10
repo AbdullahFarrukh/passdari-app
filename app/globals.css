@@ -159,6 +159,115 @@ a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-v
   animation: stamp-print 0.5s cubic-bezier(.23, 1, .32, 1) both;
 }
 
+/* The dark sections introduced for the home page's hero, marquee, feature list and stats band — a
+   separate idea from the yellow counter above, used only where noted in app/page.tsx. The receipt
+   vocabulary (dotted leaders, torn edges, Big Shoulders / Martian Mono) carries over; the ground and
+   the card surfaces go dark instead of staying white paper, the way the rest of this app's cards do. */
+.hero-dark-glow {
+  background:
+    radial-gradient(ellipse 48% 60% at 50% 18%, rgba(61, 92, 255, .20) 0%, rgba(61, 92, 255, 0) 70%),
+    #0A0C10;
+}
+
+/* The Gotas "moving border": a conic-gradient comet spinning behind a solid interior, clipped to a 1px
+   ring by padding + overflow. Give the wrapper `.glow-ring` (plus whatever `rounded-*` shape it should
+   take), and the actual content `.glow-ring-content` with a background matching whatever sits behind
+   it — that background is what hides the comet everywhere but the 1px edge. Used on the one thing in
+   the header that is a real external link (the Solana pill) and the one real social link in the footer,
+   so the ring reads as "this goes somewhere" rather than decoration for its own sake. */
+.glow-ring {
+  position: relative;
+  display: inline-flex;
+  padding: 1px;
+  overflow: hidden;
+  border-radius: inherit;
+}
+.glow-ring::before {
+  content: "";
+  position: absolute;
+  inset: -250%;
+  background: conic-gradient(from 0deg, transparent 0 70%, var(--stamp-blue) 90%, #5EE7FF 96%, transparent 100%);
+  animation: glow-spin 3.8s linear infinite;
+}
+.glow-ring-content {
+  position: relative;
+  z-index: 1;
+  border-radius: inherit;
+}
+@keyframes glow-spin { to { transform: rotate(360deg); } }
+
+/* The home page's decorative hero: a stamp dropping onto the example card, on a loop. Nothing here is
+   the real claim flow (that lives on /customer) — this is the same relationship ExampleCard already has
+   to a real stamp card, just animated. Reuses `stamp-print` above for the square itself. */
+@keyframes hero-bracket-pulse { 0%, 100% { opacity: .32; } 50% { opacity: .8; } }
+.hero-bracket-pulse { animation: hero-bracket-pulse 1.6s ease-in-out infinite; }
+
+@keyframes hero-bracket-snap {
+  0% { transform: scale(1.22); opacity: .5; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.hero-bracket-snap { animation: hero-bracket-snap 320ms cubic-bezier(.23, 1, .32, 1) both; }
+
+@keyframes hero-scan-sweep {
+  0%   { top: 2px; opacity: 0; }
+  12%  { opacity: 1; }
+  50%  { top: 100px; opacity: 1; }
+  88%  { opacity: 1; }
+  100% { top: 2px; opacity: 0; }
+}
+.hero-scan-sweep { animation: hero-scan-sweep 1.6s cubic-bezier(.45, 0, .55, 1) infinite; }
+
+@keyframes hero-qr-flash { 0% { opacity: .5; } 100% { opacity: 0; } }
+.hero-qr-flash { animation: hero-qr-flash 420ms ease-out both; }
+
+@keyframes hero-stamp-drop {
+  0%   { transform: translate(var(--hx), calc(var(--hy) - 250px)) rotate(-26deg) scale(.55); opacity: 0; }
+  8%   { opacity: 1; }
+  46%  { transform: translate(var(--hx), calc(var(--hy) - 6px)) rotate(-9deg) scale(1.06); opacity: 1; }
+  54%  { transform: translate(var(--hx), calc(var(--hy) + 4px)) rotate(-7deg) scale(.94); opacity: 1; }
+  64%  { transform: translate(var(--hx), calc(var(--hy) - 4px)) rotate(-8deg) scale(1.01); opacity: 1; }
+  78%  { transform: translate(var(--hx), calc(var(--hy) + 2px)) rotate(-8deg) scale(.985); opacity: 1; }
+  88%  { transform: translate(var(--hx), calc(var(--hy) - 34px)) rotate(-8deg) scale(.85); opacity: 1; }
+  100% { transform: translate(var(--hx), calc(var(--hy) - 78px)) rotate(-8deg) scale(.78); opacity: 0; }
+}
+.hero-stamp-drop { animation: hero-stamp-drop 900ms cubic-bezier(.2, .9, .25, 1) both; }
+
+@keyframes hero-ink-ripple {
+  0%   { transform: translate(var(--hx), var(--hy)) scale(.4); opacity: .8; }
+  100% { transform: translate(var(--hx), var(--hy)) scale(8.5); opacity: 0; }
+}
+/* These three share the stamp drop's own timing: the class is applied the instant the drop starts, but
+   the stamp doesn't actually touch the card until ~430ms into its 900ms flight — so the ripple, the
+   specks and the card's own flinch are all delayed to start then, not at the class's own t=0. */
+.hero-ink-ripple { animation: hero-ink-ripple 560ms cubic-bezier(.17, .84, .44, 1) 430ms both; }
+
+@keyframes hero-speck-fly {
+  0%   { transform: translate(var(--hx), var(--hy)) scale(1); opacity: 1; }
+  100% { transform: translate(calc(var(--hx) + var(--dx)), calc(var(--hy) + var(--dy))) scale(.2); opacity: 0; }
+}
+.hero-speck-fly { animation: hero-speck-fly 460ms cubic-bezier(.23, 1, .32, 1) 440ms both; }
+
+@keyframes hero-card-thud { 0% { transform: scaleY(1); } 30% { transform: scaleY(.99); } 100% { transform: scaleY(1); } }
+.hero-card-thud { animation: hero-card-thud 560ms cubic-bezier(.22, .9, .3, 1) 430ms both; }
+
+/* A continuously-scrolling row of real shop slips. The list is rendered twice back to back and this
+   moves it by exactly half its own width, so the loop has no visible seam. */
+@keyframes marquee-scroll { to { transform: translateX(-50%); } }
+.marquee-track { animation: marquee-scroll 46s linear infinite; }
+.marquee-viewport:hover .marquee-track,
+.marquee-viewport:focus-within .marquee-track { animation-play-state: paused; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  /* The rule above only shortens a running animation; a continuous loop just spins imperceptibly fast
+     instead of stopping, which reduced motion is specifically asking this page not to do. These need
+     to actually stop. */
+  .glow-ring::before,
+  .hero-bracket-pulse,
+  .hero-scan-sweep,
+  .marquee-track {
+    animation: none !important;
+  }
+  .glow-ring::before { opacity: .55; }
+  .marquee-viewport { overflow-x: auto; }
 }

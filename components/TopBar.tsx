@@ -1,12 +1,22 @@
 import Link from "next/link";
 import { CLUSTER_LABEL } from "@/lib/explorer";
 
-// The three dots echo the stamp row on a card: two stamped, one still to come.
+// The brand mark: a loyalty card one stamp from full, nine squares stamped, the tenth filled solid
+// rather than left open — at header size the dashed "still to come" square used on the full-size mark
+// would just read as noise, so this is the same shape simplified the way a favicon has to be.
 function BrandMark() {
   return (
-    <svg width="26" height="10" viewBox="0 0 26 10" aria-hidden="true">
-      <circle cx="5" cy="5" r="4" fill="#B81C0D" /><circle cx="13" cy="5" r="4" fill="#B81C0D" />
-      <circle cx="21" cy="5" r="3.2" fill="none" stroke="#FFE600" strokeWidth="1.5" />
+    <svg width="16" height="25" viewBox="0 0 60 94" fill="currentColor" aria-hidden="true">
+      <rect x="2"    y="2"  width="16" height="16" rx="3" />
+      <rect x="20.5" y="2"  width="16" height="16" rx="3" />
+      <rect x="39"   y="2"  width="16" height="16" rx="3" />
+      <rect x="2"    y="20.5" width="16" height="16" rx="3" />
+      <rect x="39"   y="20.5" width="16" height="16" rx="3" />
+      <rect x="2"    y="39" width="16" height="16" rx="3" />
+      <rect x="20.5" y="39" width="16" height="16" rx="3" />
+      <rect x="39"   y="39" width="16" height="16" rx="3" />
+      <rect x="2"    y="57.5" width="16" height="16" rx="3" />
+      <rect x="2"    y="76" width="16" height="16" rx="3" />
     </svg>
   );
 }
@@ -23,10 +33,22 @@ export function TopBar() {
           <Link href="/customer" className="rounded-md px-2 py-1.5 hover:bg-paper/10 sm:px-2.5">Customer</Link>
           <Link href="/merchant" className="rounded-md px-2 py-1.5 hover:bg-paper/10 sm:px-2.5">Merchant</Link>
         </nav>
-        <span className="inline-flex items-center gap-2 rounded-full border border-paper/30 px-2.5 py-1 font-mono text-xs sm:px-3">
-          <span className="size-2 rounded-full bg-[#34D264]" aria-hidden="true" />
-          <span className="hidden sm:inline">Solana</span> {CLUSTER_LABEL}
-        </span>
+        {/* The ring is the Gotas "moving border" trick: a conic-gradient comet spinning behind a solid
+            interior, clipped to 1px. It doubles as the only visual cue that this pill is a link — to
+            solana.com, not to anything devnet-specific, since that is the one place "Solana" itself
+            points. */}
+        <a
+          href="https://solana.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="glow-ring rounded-full"
+          aria-label={`Solana ${CLUSTER_LABEL} — visit solana.com (opens in a new tab)`}
+        >
+          <span className="glow-ring-content inline-flex items-center gap-2 rounded-full bg-charcoal px-2.5 py-1 font-mono text-xs text-paper transition-colors hover:bg-[#1c1c1c] sm:px-3">
+            <span className="size-2 rounded-full bg-[#34D264]" aria-hidden="true" />
+            <span className="hidden sm:inline">Solana</span> {CLUSTER_LABEL}
+          </span>
+        </a>
       </div>
     </header>
   );

@@ -206,7 +206,7 @@ function StatsBand({ businesses }: { businesses: DirectoryBusiness[] }) {
       <div className="mx-auto max-w-6xl">
         <div className="mx-auto max-w-xl text-center">
           <p className="font-mono text-[10.5px] uppercase tracking-[.16em] text-[var(--accent-cyan)]">Not our word for it</p>
-          <h2 className="mt-2 text-balance text-[clamp(1.65rem,3.6vw,2.4rem)] font-extrabold uppercase leading-none text-ink">
+          <h2 id="counted" className="mt-2 text-balance text-[clamp(1.65rem,3.6vw,2.4rem)] font-extrabold uppercase leading-none text-ink">
             Counted on Solana, not by us
           </h2>
         </div>

@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { PROGRAM_ID } from "@/lib/explorer";
-import { OnChainId } from "@/components/ui/OnChainId";
 import { WalletExplainer } from "@/components/WalletExplainer";
 import { Receipt } from "@/components/ui/Receipt";
 import { ReceiptRow } from "@/components/ui/ReceiptRow";
@@ -8,6 +6,7 @@ import { Barcode, BARCODE_B } from "@/components/ui/Barcode";
 import { ArrowRightIcon } from "@/components/ui/icons";
 import { BusinessSlip } from "@/components/ui/BusinessSlip";
 import { HeroScanDemo } from "@/components/HeroScanDemo";
+import { VerifyLookup } from "@/components/VerifyLookup";
 import { getDirectorySafely, categoriesOf, type DirectoryBusiness } from "@/lib/directory";
 
 // The directory is read from the chain, so the page is rebuilt on a timer rather than on every visit:
@@ -335,9 +334,9 @@ export default async function HomePage() {
             Don&apos;t take our word for it
           </h2>
           <p className="band-invert-sub max-w-2xl text-lg">
-            Open the program on Solana Explorer, then look up any card, voucher or receipt address shown in the app. The data there is exactly what you see on screen.
+            Paste any card, voucher, receipt or business address this app has shown you, and we&apos;ll open it straight on Solana Explorer. The data there is exactly what you see on screen.
           </p>
-          <div className="mt-1"><OnChainId address={PROGRAM_ID} label="Program" full /></div>
+          <VerifyLookup />
         </div>
       </section>
     </div>

@@ -1,10 +1,46 @@
 "use client";
 
-import { useState } from "react";
-import { useZxing } from "react-zxing";
+import { useEffect, useState } from "react";
+import { prepareWasm, useZxing } from "react-zxing";
+
+// The decoder is a WebAssembly file that the library fetches from a public CDN unless told otherwise, which
+// the site's own security policy refuses (connect-src is limited to this site and the RPC endpoints), so the
+// scanner failed before it ever asked for the camera. It is served from /zxing instead, copied from
+// node_modules/zxing-wasm/dist/reader (version 3.1.3). If that package is upgraded, copy the new file over:
+// the decoder and its wasm have to be the same version.
+const WASM_URL = "/zxing/zxing_reader.wasm";
 
 // A dark viewport with a scan frame, like a real camera app — not a bare, borderless <video>.
 export function QrScanner({ onScan }: { onScan: (text: string) => void }) {
+  const [wasmReady, setWasmReady] = useState(false);
+  const [wasmFailed, setWasmFailed] = useState(false);
+
+  // The scanner must not start until the decoder's location is set, so it only mounts once this settles.
+  useEffect(() => {
+    let cancelled = false;
+    prepareWasm({ wasmUrl: WASM_URL })
+      .then(() => { if (!cancelled) setWasmReady(true); })
+      .catch((err) => {
+        console.error("Could not load the QR decoder:", err);
+        if (!cancelled) setWasmFailed(true);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  if (wasmFailed) {
+    return (
+      <p role="alert" className="err">
+        The scanner couldn&apos;t start. Paste the code below instead.
+      </p>
+    );
+  }
+  if (!wasmReady) {
+    return <p className="font-mono text-sm text-muted">Starting the camera…</p>;
+  }
+  return <Scanner onScan={onScan} />;
+}
+
+function Scanner({ onScan }: { onScan: (text: string) => void }) {
   const [paused, setPaused] = useState(false);
 
   const { ref } = useZxing({

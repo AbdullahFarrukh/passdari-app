@@ -12,10 +12,11 @@ const rpcOrigin = (() => {
 })();
 
 // Scripts keep 'unsafe-inline' because Next.js injects inline bootstrap scripts; a nonce-based policy
-// would remove it but needs a middleware change. Everything else is locked to this origin.
+// would remove it but needs a middleware change. 'wasm-unsafe-eval' lets WebAssembly compile (the QR
+// scanner's decoder) without allowing eval() of strings. Everything else is locked to this origin.
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",

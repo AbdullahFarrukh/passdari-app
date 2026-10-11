@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
 // configured with. Derive it from the same variable the app uses, so the policy can't drift from it.
 const rpcOrigin = (() => {
   try {
-    return new URL(process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? "https://api.devnet.solana.com").origin;
+    return new URL(process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com").origin;
   } catch {
     return "https://api.devnet.solana.com";
   }

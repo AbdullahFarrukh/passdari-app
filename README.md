@@ -61,7 +61,7 @@ Create `.env.local`:
 |---|---|---|
 | `GEMINI_API_KEY` | For the AI copilot. Get a free key at [aistudio.google.com](https://aistudio.google.com) — no billing required for the free tier | Only for the copilot's live answers |
 | `HELIUS_RPC_URL` | The Solana RPC address the server uses (relay and copilot data) | Recommended; falls back to the public devnet endpoint, which is slow and unreliable |
-| `NEXT_PUBLIC_HELIUS_RPC_URL` | The same, for the browser | Same |
+| `NEXT_PUBLIC_SOLANA_RPC_URL` | The Solana RPC address the browser reads from | Optional; defaults to the public devnet endpoint, which is what the browser should use for now (see Known limitations: the Helius devnet endpoint returned contradictory reads) |
 | `RELAYER_SECRET_KEY` | The relayer's secret key, as a JSON array of its 64 bytes (the contents of a `solana-keygen` file). Never commit it | Yes |
 | `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (or Vercel's `KV_REST_API_URL` and `KV_REST_API_TOKEN`) | The store for customer display names and the shared rate-limit counts | Optional. Without them names are kept in memory and disappear when the dev server restarts, and rate limits are only per instance. A production build refuses to save a name instead, with a clear error |
 | `CRON_SECRET` | Guards the daily clean-up sweep (see below); Vercel sets this as the request's bearer token automatically once the variable exists | Recommended in production; without it the sweep refuses to run rather than run unguarded |
@@ -252,7 +252,7 @@ Set `CRON_SECRET` before or right after the first deploy, so the daily clean-up 
 - **The 15-a-minute per-IP relay limit will throttle a busy shop.** Customers using the shop's own wifi all share one address. It is not a problem at today's size and is a certainty at a few hundred customers a shop.
 - **The per-wallet transfer cap bounds one person, not everyone.** Ten a day is 0.003 SOL a month per wallet; if every wallet maxed it out at fifty thousand cards that would be 150 SOL a month. The global daily budget cap above is the real backstop.
 - **The devnet directory contains test data.** Roughly fifty shops are leftovers from end-to-end test runs, and they cannot be removed: nothing could close a business account until recently, and their owner keys were random and discarded. Real demo shops rank above them by activity, so they sit below the fold.
-- **The browser-side Helius RPC URL is public.** `NEXT_PUBLIC_HELIUS_RPC_URL` is compiled into the page, so its API key is visible to anyone who loads the site. It is a read-only RPC key and can't move funds, but someone could use up its quota. Replace it with a restricted key for the browser when there's time.
+- **The browser reads from the public devnet endpoint, not Helius.** Measured on 2026-10-11, the Helius devnet endpoint returned contradictory data for the same account: one stamp card's count alternated between 0 and 1 across consecutive reads at both `confirmed` and `finalized`, and twice at the identical context slot, which only happens when reads are answered by nodes that disagree. On screen a card blinked in and out of "My cards" and the same customer blinked in and out of the merchant's loyal-customers list at the same moment. The public endpoint gave the same correct answer on every read of both queries. The browser therefore uses `NEXT_PUBLIC_SOLANA_RPC_URL` (public devnet when unset). The server still uses `HELIUS_RPC_URL` for writes and confirmation, which this did not affect. Before mainnet, use a paid dedicated endpoint for both, after re-running a read-consistency check like the one above.
 
 ## Before mainnet
 
@@ -319,6 +319,6 @@ The relayer's real secret key lives in the `RELAYER_SECRET_KEY` environment vari
 
 **What the app shows if it happens anyway:** every component routes its errors through `lib/errorMessages.ts`, and a genuinely empty relayer gets its own distinct message — clearly different in tone from an ordinary mistake, explicitly telling the person "this isn't something you did." It's a real, visible message either way, never a silent hang — but it's still a full outage, not something the app can route around on its own.
 
-Both connections take their address from the environment (`HELIUS_RPC_URL` for the server, `NEXT_PUBLIC_HELIUS_RPC_URL` for the browser) and fall back to the public devnet endpoint if it is missing.
+Both connections take their address from the environment (`HELIUS_RPC_URL` for the server, `NEXT_PUBLIC_SOLANA_RPC_URL` for the browser) and fall back to the public devnet endpoint if it is missing.
 
 

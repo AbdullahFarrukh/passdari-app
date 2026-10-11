@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import BN from "bn.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
@@ -82,13 +82,6 @@ export function MyCards({
   const [mintingFor, setMintingFor] = useState<string | null>(null);
   const [mintError, setMintError] = useState<string | null>(null);
 
-  // The last version of each card we actually trusted, how many polls in a row it's been missing from
-  // the scan entirely, and which cards are one flaky zero-stamps read away from being believed. See the
-  // comment where these are used, below.
-  const stableCardsRef = useRef<Map<string, CardWithBusiness>>(new Map());
-  const missingStreakRef = useRef<Map<string, number>>(new Map());
-  const pendingZeroRef = useRef<Set<string>>(new Set());
-
   useEffect(() => {
     let cancelled = false;
 
@@ -116,48 +109,6 @@ export function MyCards({
         })
       );
 
-      // `getProgramAccounts` (the memcmp-filtered scan above) is read off a secondary index that can lag
-      // the real account state on any single poll — a known flakiness pattern, worse right after an
-      // account is first created or just changed, even at "confirmed" commitment. That shows up two
-      // ways: a card can be missing from the scan's results entirely for a poll or two, or a card that
-      // is there can have a stale field (most dangerously, stamps reading 0, which looks exactly like a
-      // real cash-in). Neither is trusted on a single read: a card seen this poll is trusted at once, a
-      // card that drops to 0 stamps has to repeat that on the *next* poll before it's believed, and a
-      // card missing entirely keeps showing its last known data for one more poll before it's actually
-      // removed. A genuine cash-in or a genuinely closed card still disappears — just one poll later,
-      // not on a single flaky read.
-      const seenThisPoll = new Set<string>();
-      const stable: CardWithBusiness[] = [];
-
-      for (const card of withBusinessInfo) {
-        const key = card.cardAddress;
-        seenThisPoll.add(key);
-        missingStreakRef.current.delete(key);
-
-        const last = stableCardsRef.current.get(key);
-        if (card.stamps === 0 && last && last.stamps > 0 && !pendingZeroRef.current.has(key)) {
-          pendingZeroRef.current.add(key);
-          stable.push(last);
-          continue;
-        }
-        pendingZeroRef.current.delete(key);
-        stableCardsRef.current.set(key, card);
-        stable.push(card);
-      }
-
-      for (const [key, last] of stableCardsRef.current) {
-        if (seenThisPoll.has(key)) continue;
-        const streak = (missingStreakRef.current.get(key) ?? 0) + 1;
-        if (streak < 2) {
-          missingStreakRef.current.set(key, streak);
-          stable.push(last);
-        } else {
-          stableCardsRef.current.delete(key);
-          missingStreakRef.current.delete(key);
-          pendingZeroRef.current.delete(key);
-        }
-      }
-
       // Whether each card's NFT is in the wallet. If the lookup fails the cards still show, just without the
       // NFT line.
       let nfts: { mint: PublicKey; held: boolean }[] = [];
@@ -166,7 +117,7 @@ export function MyCards({
           program.provider.connection,
           program.programId,
           keypair.publicKey,
-          stable.map((c) => ({ address: new PublicKey(c.cardAddress), nftCycle: c.nftCycle }))
+          withBusinessInfo.map((c) => ({ address: new PublicKey(c.cardAddress), nftCycle: c.nftCycle }))
         );
       } catch (err) {
         console.error("Could not check the card NFTs:", err);
@@ -174,13 +125,9 @@ export function MyCards({
 
       if (cancelled) return;
 
-      const withNfts = stable.map((c, i) =>
+      const withNfts = withBusinessInfo.map((c, i) =>
         nfts[i] ? { ...c, cardNft: { mint: nfts[i].mint.toBase58(), held: nfts[i].held } } : c
       );
-
-      // Carry the NFT info forward too, so a card kept on screen through a missing-this-poll grace
-      // period (above) still shows the right "in your wallet" state next time, not a blank one.
-      withNfts.forEach((c) => stableCardsRef.current.set(c.cardAddress, c));
 
       setCards(withNfts);
       onLoaded?.(withNfts.length);
@@ -189,9 +136,9 @@ export function MyCards({
       // a card sitting at zero (never started, or just cashed in and not yet restamped) is neither; it's
       // the same "nothing to show" state the list below hides. Together they match exactly what's
       // visible in "My cards".
-      const totalRewards = stable.reduce((sum, c) => sum + c.rewardsEarned, 0);
-      const completedCards = stable.filter((c) => c.stamps >= c.stampsRequired).length;
-      const inProgressCards = stable.filter((c) => c.stamps > 0 && c.stamps < c.stampsRequired).length;
+      const totalRewards = withBusinessInfo.reduce((sum, c) => sum + c.rewardsEarned, 0);
+      const completedCards = withBusinessInfo.filter((c) => c.stamps >= c.stampsRequired).length;
+      const inProgressCards = withBusinessInfo.filter((c) => c.stamps > 0 && c.stamps < c.stampsRequired).length;
       onStats?.({ totalRewards, completedCards, inProgressCards });
     }
 

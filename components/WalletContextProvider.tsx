@@ -18,8 +18,20 @@ import { Connection } from "@solana/web3.js";
 // with none of that.
 const ConnectionContext = createContext<Connection | null>(null);
 
+// Reads go wherever NEXT_PUBLIC_SOLANA_RPC_URL points, and to devnet's own public endpoint when it
+// points nowhere.
+//
+// Deliberately no longer the Helius endpoint the server side still uses. That endpoint was measured
+// returning contradictory data for the same account: reading one stamp card every few seconds had its
+// stamp count alternating between 0 and 1, at "confirmed" and at "finalized" alike, twice even at the
+// identical context slot — only possible if the reads are answered by nodes that disagree with each
+// other. On screen that made a card appear and disappear from "My cards" by itself, and blinked the
+// same customer in and out of the merchant's loyal-customers list at the same moment. The public
+// endpoint returned the same correct answer on every read of both those queries, comfortably inside
+// its rate limits at the rate these screens poll. Point this at a paid, dedicated endpoint before
+// mainnet — after checking it reads consistently.
 export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
-  const endpoint = process.env.NEXT_PUBLIC_HELIUS_RPC_URL ?? "https://api.devnet.solana.com";
+  const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
   // Read at "confirmed", the same level the relay waits for before it says a
   // transaction is done. Without this the connection reads at "finalized",
   // which trails by about 13 seconds, so screens keep showing old data after

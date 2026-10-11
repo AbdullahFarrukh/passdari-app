@@ -28,6 +28,9 @@ type CardWithBusiness = {
   cardNft: { mint: string; held: boolean } | null;
   lifetimeStamps: number;
   rewardsEarned: number;
+  // When this card last received a stamp — used to put the card someone just used at the top of the
+  // list, not wherever it happens to sort by address.
+  lastStampTs: number;
   /// Who paid this card's rent. Blank on cards made before the field existed.
   rentPayer: PublicKey | null;
   name: string;
@@ -49,6 +52,7 @@ function toCard(
     nftCycle: entry.account.nftCycle as number,
     cardNft: null,
     lifetimeStamps,
+    lastStampTs: Number((entry.account.lastStampTs as { toString: () => string }).toString()),
     rentPayer: (entry.account.rentPayer as PublicKey) ?? null,
     // The card keeps this count itself; it used to be worked out from the stamps, which went wrong as
     // soon as a shop changed how many a reward takes.
@@ -71,7 +75,7 @@ export function MyCards({
   refreshKey: number;
   onChange: () => void;
   onLoaded?: (count: number) => void;
-  onStats?: (stats: { totalStamps: number; completedCards: number; inProgressCards: number }) => void;
+  onStats?: (stats: { totalRewards: number; completedCards: number; inProgressCards: number }) => void;
 }) {
   const program = useCustomerProgram(keypair);
   const [cards, setCards] = useState<CardWithBusiness[] | null>(null);
@@ -128,10 +132,14 @@ export function MyCards({
       setCards(withNfts);
       onLoaded?.(withNfts.length);
 
-      const totalStamps = withBusinessInfo.reduce((sum, c) => sum + c.stamps, 0);
+      // "Completed" and "in progress" both only count a card that actually has stamps on it right now —
+      // a card sitting at zero (never started, or just cashed in and not yet restamped) is neither; it's
+      // the same "nothing to show" state the list below hides. Together they match exactly what's
+      // visible in "My cards".
+      const totalRewards = withBusinessInfo.reduce((sum, c) => sum + c.rewardsEarned, 0);
       const completedCards = withBusinessInfo.filter((c) => c.stamps >= c.stampsRequired).length;
-      const inProgressCards = withBusinessInfo.length - completedCards;
-      onStats?.({ totalStamps, completedCards, inProgressCards });
+      const inProgressCards = withBusinessInfo.filter((c) => c.stamps > 0 && c.stamps < c.stampsRequired).length;
+      onStats?.({ totalRewards, completedCards, inProgressCards });
     }
 
     loadIfStillCurrent();
@@ -257,11 +265,31 @@ export function MyCards({
     );
   }
 
+  // A card at zero stamps has nothing to show: either it has never been started, or it was just cashed
+  // in and its soulbound NFT burned with it. Hiding it here is what keeps this list from piling up with
+  // every business someone has ever finished a card at — it comes back the moment a new stamp lands on
+  // it. The most recently stamped card sorts first, so whichever card someone just used is the one they
+  // see without scrolling.
+  const activeCards = cards
+    .filter((card) => card.stamps > 0)
+    .sort((a, b) => b.lastStampTs - a.lastStampTs);
+
+  if (activeCards.length === 0) {
+    return (
+      <section aria-labelledby="my-cards" className="flex w-full flex-col gap-3">
+        <h2 id="my-cards" className="text-2xl text-ink">My cards</h2>
+        <p className="rounded-xl border-2 border-dashed border-ink bg-surface p-5 text-sm text-muted">
+          No cards in progress right now. Scan a receipt to start a new one.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section aria-labelledby="my-cards" className="flex w-full flex-col gap-3">
       <h2 id="my-cards" className="text-2xl text-ink">My cards</h2>
       <div className="flex flex-col gap-6">
-        {cards.map((card) => {
+        {activeCards.map((card) => {
           const isFull = card.stamps >= card.stampsRequired;
           return (
             <div key={card.cardAddress} className="flex flex-col gap-3">

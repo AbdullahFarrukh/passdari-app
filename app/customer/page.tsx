@@ -48,7 +48,7 @@ export default function CustomerPage() {
   const [cardCount, setCardCount] = useState(0);
 
   const [stats, setStats] = useState({
-    totalStamps: 0,
+    totalRewards: 0,
     completedCards: 0,
     inProgressCards: 0,
     voucherCount: 0,
@@ -332,7 +332,7 @@ export default function CustomerPage() {
           <StatStrip
             title="TOTALS"
             items={[
-              { label: "Total stamps", value: stats.totalStamps },
+              { label: "Total rewards", value: stats.totalRewards },
               { label: "Vouchers held", value: stats.voucherCount },
               { label: "Cards completed", value: stats.completedCards },
               { label: "In progress", value: stats.inProgressCards },

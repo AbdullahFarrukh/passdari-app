@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import BN from "bn.js";
 import { useCustomerProgram } from "@/lib/customerProgram";
@@ -82,6 +82,11 @@ export function MyCards({
   const [mintingFor, setMintingFor] = useState<string | null>(null);
   const [mintError, setMintError] = useState<string | null>(null);
 
+  // The last stamp count we actually believed for each card, and which cards are one flaky zero-read
+  // away from being believed. See the comment where these are used, below.
+  const stableStampsRef = useRef<Map<string, number>>(new Map());
+  const pendingZeroRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     let cancelled = false;
 
@@ -109,6 +114,30 @@ export function MyCards({
         })
       );
 
+      // `getProgramAccounts` (the memcmp-filtered scan above) can occasionally hand back a stale read of
+      // one account on a single poll — a known flakiness pattern for secondary-index-filtered RPC scans,
+      // even at "confirmed" commitment. A card dropping straight to 0 stamps is also exactly what a real
+      // cash-in looks like, and the two can't be told apart from a single read. So a rise is trusted at
+      // once, but a drop to zero has to repeat on the *next* poll before it's believed — otherwise one
+      // flaky read was enough to make a card blink out of "My cards" and back for no real reason.
+      const stable = withBusinessInfo.map((card) => {
+        const key = card.cardAddress;
+        const lastTrusted = stableStampsRef.current.get(key);
+        if (card.stamps > 0 || lastTrusted === undefined || lastTrusted === 0) {
+          stableStampsRef.current.set(key, card.stamps);
+          pendingZeroRef.current.delete(key);
+          return card;
+        }
+        if (pendingZeroRef.current.has(key)) {
+          // Read as zero on two polls in a row now — this is a real cash-in, not a flaky read.
+          stableStampsRef.current.set(key, 0);
+          pendingZeroRef.current.delete(key);
+          return card;
+        }
+        pendingZeroRef.current.add(key);
+        return { ...card, stamps: lastTrusted };
+      });
+
       // Whether each card's NFT is in the wallet. If the lookup fails the cards still show, just without the
       // NFT line.
       let nfts: { mint: PublicKey; held: boolean }[] = [];
@@ -117,7 +146,7 @@ export function MyCards({
           program.provider.connection,
           program.programId,
           keypair.publicKey,
-          withBusinessInfo.map((c) => ({ address: new PublicKey(c.cardAddress), nftCycle: c.nftCycle }))
+          stable.map((c) => ({ address: new PublicKey(c.cardAddress), nftCycle: c.nftCycle }))
         );
       } catch (err) {
         console.error("Could not check the card NFTs:", err);
@@ -125,7 +154,7 @@ export function MyCards({
 
       if (cancelled) return;
 
-      const withNfts = withBusinessInfo.map((c, i) =>
+      const withNfts = stable.map((c, i) =>
         nfts[i] ? { ...c, cardNft: { mint: nfts[i].mint.toBase58(), held: nfts[i].held } } : c
       );
 
@@ -136,9 +165,9 @@ export function MyCards({
       // a card sitting at zero (never started, or just cashed in and not yet restamped) is neither; it's
       // the same "nothing to show" state the list below hides. Together they match exactly what's
       // visible in "My cards".
-      const totalRewards = withBusinessInfo.reduce((sum, c) => sum + c.rewardsEarned, 0);
-      const completedCards = withBusinessInfo.filter((c) => c.stamps >= c.stampsRequired).length;
-      const inProgressCards = withBusinessInfo.filter((c) => c.stamps > 0 && c.stamps < c.stampsRequired).length;
+      const totalRewards = stable.reduce((sum, c) => sum + c.rewardsEarned, 0);
+      const completedCards = stable.filter((c) => c.stamps >= c.stampsRequired).length;
+      const inProgressCards = stable.filter((c) => c.stamps > 0 && c.stamps < c.stampsRequired).length;
       onStats?.({ totalRewards, completedCards, inProgressCards });
     }
 

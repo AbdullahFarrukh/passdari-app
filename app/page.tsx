@@ -72,8 +72,8 @@ function HowItWorksReceipt() {
 // either theme rather than carrying dark-mode colours into a light page.
 function MarqueeSlip({ business, rank }: { business: DirectoryBusiness; rank: number }) {
   return (
-    <div className="w-[200px] shrink-0 overflow-hidden rounded-xl border border-line bg-surface">
-      <div className="px-4 pb-3.5 pt-4">
+    <div className="w-[200px] shrink-0">
+      <Receipt className="px-4 pb-3.5 pt-4">
         <p className="font-mono text-[9px] text-muted">#{rank}</p>
         <span className="tag-accent mt-1.5 inline-block px-2 py-[2px] font-mono text-[8.5px] uppercase tracking-wide">
           {business.category}
@@ -85,7 +85,7 @@ function MarqueeSlip({ business, rank }: { business: DirectoryBusiness; rank: nu
           <span className="-translate-y-0.5 min-w-2 flex-1 border-b border-dotted border-line-strong/60" />
           <span className="font-bold tabular-nums text-ink">{business.totalStampsIssued}</span>
         </div>
-      </div>
+      </Receipt>
     </div>
   );
 }

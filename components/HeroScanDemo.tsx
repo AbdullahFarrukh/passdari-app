@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Receipt } from "@/components/ui/Receipt";
 
 // The home hero's moving piece: the same example card ExampleCard always showed (Blue Door Cafe, 7 of
 // 10 stamps), now looping through the motion of claiming its 8th. Entirely decorative — aria-hidden,
@@ -147,8 +148,7 @@ export function HeroScanDemo() {
 
   return (
     <div ref={stageRef} className="relative mx-auto w-full max-w-sm" aria-hidden="true">
-      <div className="relative rounded-2xl border border-line bg-surface shadow-[var(--card-shadow)]">
-        <div className={`relative px-6 pb-3.5 pt-5 ${phase === "stamping" ? "hero-card-thud" : ""}`}>
+      <Receipt className={`relative px-6 pb-3.5 pt-5 ${phase === "stamping" ? "hero-card-thud" : ""}`}>
           <p className="text-center font-mono text-[10.5px] tracking-[.15em] text-muted">PASSDARI · LOYALTY CARD</p>
           <p className="mt-2 text-center font-display text-4xl font-extrabold uppercase leading-none text-ink">Blue Door Cafe</p>
           <p className="mt-1.5 text-center font-mono text-[11px] uppercase text-[var(--accent-cyan)]">Free coffee</p>
@@ -218,8 +218,7 @@ export function HeroScanDemo() {
             />
             {statusText[phase]}
           </p>
-        </div>
-      </div>
+      </Receipt>
 
       {/* The stamp, the ink ripple and the specks — positioned over the target square via --hx/--hy. */}
       <div

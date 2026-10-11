@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { RPC_FALLBACK_ORIGINS } from "./lib/rpcFetch";
 
 // The only origin the browser talks to for Solana reads and sends is the RPC endpoint the app is
 // configured with. Derive it from the same variable the app uses, so the policy can't drift from it.
@@ -18,7 +19,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  `connect-src 'self' ${rpcOrigin}`,
+  `connect-src 'self' ${[rpcOrigin, ...RPC_FALLBACK_ORIGINS].join(" ")}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

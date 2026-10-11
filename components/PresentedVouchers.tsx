@@ -35,6 +35,9 @@ export function PresentedVouchers({
   const program = useCustomerProgram(keypair);
   const [vouchers, setVouchers] = useState<PresentedVoucher[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Its own timer tick, so waiting for a customer to present a voucher refreshes this list and nothing else.
+  // It used to bump the page's shared refresh key, which also re-ran the loyal-customers scan every 5 seconds.
+  const [tick, setTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -79,14 +82,19 @@ export function PresentedVouchers({
       );
     }
 
-    load();
-  }, [program, refreshKey]);
+    load().catch((err) => console.error("Could not load presented vouchers:", err));
+  }, [program, refreshKey, tick]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      onChange();
-    }, 5000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => setTick((t) => t + 1), 6000);
+    // The page's headline numbers and loyal-customers list ride on the shared key, and they change far less
+    // often than a voucher gets presented, so they are asked for less often.
+    const pageInterval = setInterval(() => onChange(), 15000);
+    return () => {
+      clearInterval(interval);
+      clearInterval(pageInterval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleRedeem(v: PresentedVoucher) {

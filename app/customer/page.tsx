@@ -74,7 +74,7 @@ export default function CustomerPage() {
     if (!keypair) return;
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") setRefreshKey((k) => k + 1);
-    }, 8000);
+    }, 12000);
     return () => clearInterval(interval);
   }, [keypair]);
 

@@ -2,6 +2,7 @@
 
 import { FC, ReactNode, createContext, useContext, useMemo } from "react";
 import { Connection } from "@solana/web3.js";
+import { failoverFetch } from "@/lib/rpcFetch";
 
 // The name is a holdover from the Phantom-wallet era — no wallets are
 // registered here anymore, on either the merchant or customer side. What
@@ -36,7 +37,10 @@ export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children })
   // transaction is done. Without this the connection reads at "finalized",
   // which trails by about 13 seconds, so screens keep showing old data after
   // an action. (wallet-adapter's ConnectionProvider used to set this for us.)
-  const connection = useMemo(() => new Connection(endpoint, "confirmed"), [endpoint]);
+  const connection = useMemo(
+    () => new Connection(endpoint, { commitment: "confirmed", fetch: failoverFetch(endpoint) }),
+    [endpoint]
+  );
 
   return <ConnectionContext.Provider value={connection}>{children}</ConnectionContext.Provider>;
 };

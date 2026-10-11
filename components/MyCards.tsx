@@ -102,12 +102,15 @@ export function MyCards({
       // current, correct state with data from a previous session.
       if (cancelled) return;
 
-      const withBusinessInfo = await Promise.all(
-        myCards.map(async (entry) => {
-          const business = await program.account.business.fetch(entry.account.business as any);
-          return toCard(entry, business);
-        })
-      );
+      // One request for every distinct shop, not one per card: this runs on every poll, and a free RPC
+      // endpoint rate-limits hard.
+      const businessKeys = [...new Set(myCards.map((entry) => (entry.account.business as PublicKey).toBase58()))];
+      const businesses = await program.account.business.fetchMultiple(businessKeys.map((key) => new PublicKey(key)));
+      const businessByKey = new Map(businessKeys.map((key, i) => [key, businesses[i]]));
+      const withBusinessInfo = myCards.flatMap((entry) => {
+        const business = businessByKey.get((entry.account.business as PublicKey).toBase58());
+        return business ? [toCard(entry, business)] : [];
+      });
 
       // Whether each card's NFT is in the wallet. If the lookup fails the cards still show, just without the
       // NFT line.
@@ -142,7 +145,9 @@ export function MyCards({
       onStats?.({ totalRewards, completedCards, inProgressCards });
     }
 
-    loadIfStillCurrent();
+    // A poll that fails (a rate limit, a dropped connection) is simply tried again at the next one. Without
+    // this the failure was an unhandled rejection, and a first load that hit it never left "Loading your cards".
+    loadIfStillCurrent().catch((err) => console.error("Could not load your cards:", err));
 
     return () => {
       cancelled = true;

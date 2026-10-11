@@ -30,6 +30,19 @@ type VoucherEntry = {
   rentPayer: PublicKey;
 };
 
+type VoucherFields = {
+  address: string;
+  businessKey: string;
+  voucherId: string;
+  mintedAt: number;
+  expiresAt: number;
+  rentPayer: PublicKey;
+};
+// Kept outside the component so they survive it re-mounting, and are shared by everyone signed in on this
+// page. Keyed by mint address, so one person's vouchers never leak into another's list.
+const voucherByMint = new Map<string, { fields: VoucherFields | null; until: number }>();
+const businessByKey = new Map<string, { name: string; rewardLabel: string }>();
+
 // While a voucher is presented, its holder is waiting for the merchant to redeem it, so the list refreshes by
 // itself. Once it is redeemed the NFT is burned and the ticket disappears without anyone having to reload.
 const REFRESH_WHILE_PRESENTED_MS = 5000;
@@ -62,45 +75,67 @@ export function MyVouchers({
       // which goes stale if the NFT is moved from outside this app.
       const held = await listHeldNfts(program!.provider.connection, keypair.publicKey);
 
-      // Anyone can send any NFT to any wallet, so keep only the ones that
-      // really are our vouchers.
-      const matched = await Promise.all(
-        held.map(async (nft) => {
-          const found = await program!.account.voucher.all([
-            { memcmp: { offset: VOUCHER_MINT_OFFSET, bytes: nft.mint.toBase58() } },
-          ]);
-          return found.map((entry) => ({ entry, nft }));
-        })
-      );
-      const found = matched.flat();
+      // Anyone can send any NFT to any wallet, so keep only the ones that really are our vouchers. A voucher's
+      // address, business, id, dates and rent payer are fixed once it is minted, so each mint is looked up once
+      // and remembered: without that every poll ran one getProgramAccounts per voucher held, and a free
+      // endpoint rate-limits those after about one a second. A mint that matched nothing is only remembered for
+      // a minute, because a voucher just minted can take a moment to show up in that scan.
+      const now = Date.now();
+      const found = (
+        await Promise.all(
+          held.map(async (nft) => {
+            const key = nft.mint.toBase58();
+            const known = voucherByMint.get(key);
+            if (known?.fields) return [{ fields: known.fields, nft }];
+            if (known && known.until > now) return [];
+            const hits = await program!.account.voucher.all([
+              { memcmp: { offset: VOUCHER_MINT_OFFSET, bytes: key } },
+            ]);
+            if (hits.length === 0) {
+              voucherByMint.set(key, { fields: null, until: now + 60_000 });
+              return [];
+            }
+            const a = hits[0].account;
+            const fields = {
+              address: hits[0].publicKey.toBase58(),
+              businessKey: (a.business as PublicKey).toBase58(),
+              voucherId: (a.voucherId as { toString: () => string }).toString(),
+              mintedAt: Number((a.mintedAt as { toString: () => string }).toString()),
+              expiresAt: Number((a.expiresAt as { toString: () => string }).toString()),
+              rentPayer: a.rentPayer as PublicKey,
+            };
+            voucherByMint.set(key, { fields, until: 0 });
+            return [{ fields, nft }];
+          })
+        )
+      ).flat();
 
-      // The ticket names the reward and the business, so look each business up once.
-      const businessKeys = [...new Set(found.map(({ entry }) => (entry.account.business as PublicKey).toBase58()))];
-      const businesses = new Map<string, { name: string; rewardLabel: string }>();
+      // The ticket names the reward and the business, so look each business up once, and keep it.
+      const businessKeys = [...new Set(found.map(({ fields }) => fields.businessKey))].filter((k) => !businessByKey.has(k));
       await Promise.all(
         businessKeys.map(async (key) => {
           try {
             const business = await program!.account.business.fetch(new PublicKey(key));
-            businesses.set(key, { name: business.name as string, rewardLabel: business.rewardLabel as string });
+            businessByKey.set(key, { name: business.name as string, rewardLabel: business.rewardLabel as string });
           } catch {
             // A ticket without a business name is still a valid voucher.
           }
         })
       );
 
-      const mapped = found.map(({ entry, nft }) => {
-        const business = businesses.get((entry.account.business as PublicKey).toBase58());
+      const mapped = found.map(({ fields, nft }) => {
+        const business = businessByKey.get(fields.businessKey);
         return {
-          address: entry.publicKey.toBase58(),
-          voucherId: (entry.account.voucherId as { toString: () => string }).toString(),
+          address: fields.address,
+          voucherId: fields.voucherId,
           mint: nft.mint,
           holderToken: nft.tokenAccount,
           presented: nft.frozen,
           businessName: business?.name ?? "Unknown business",
           rewardLabel: business?.rewardLabel ?? "Reward",
-          mintedAt: Number((entry.account.mintedAt as { toString: () => string }).toString()),
-          expiresAt: Number((entry.account.expiresAt as { toString: () => string }).toString()),
-          rentPayer: entry.account.rentPayer as PublicKey,
+          mintedAt: fields.mintedAt,
+          expiresAt: fields.expiresAt,
+          rentPayer: fields.rentPayer,
         };
       });
 

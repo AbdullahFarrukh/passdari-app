@@ -82,9 +82,11 @@ export function MyCards({
   const [mintingFor, setMintingFor] = useState<string | null>(null);
   const [mintError, setMintError] = useState<string | null>(null);
 
-  // The last stamp count we actually believed for each card, and which cards are one flaky zero-read
-  // away from being believed. See the comment where these are used, below.
-  const stableStampsRef = useRef<Map<string, number>>(new Map());
+  // The last version of each card we actually trusted, how many polls in a row it's been missing from
+  // the scan entirely, and which cards are one flaky zero-stamps read away from being believed. See the
+  // comment where these are used, below.
+  const stableCardsRef = useRef<Map<string, CardWithBusiness>>(new Map());
+  const missingStreakRef = useRef<Map<string, number>>(new Map());
   const pendingZeroRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -114,29 +116,47 @@ export function MyCards({
         })
       );
 
-      // `getProgramAccounts` (the memcmp-filtered scan above) can occasionally hand back a stale read of
-      // one account on a single poll — a known flakiness pattern for secondary-index-filtered RPC scans,
-      // even at "confirmed" commitment. A card dropping straight to 0 stamps is also exactly what a real
-      // cash-in looks like, and the two can't be told apart from a single read. So a rise is trusted at
-      // once, but a drop to zero has to repeat on the *next* poll before it's believed — otherwise one
-      // flaky read was enough to make a card blink out of "My cards" and back for no real reason.
-      const stable = withBusinessInfo.map((card) => {
+      // `getProgramAccounts` (the memcmp-filtered scan above) is read off a secondary index that can lag
+      // the real account state on any single poll — a known flakiness pattern, worse right after an
+      // account is first created or just changed, even at "confirmed" commitment. That shows up two
+      // ways: a card can be missing from the scan's results entirely for a poll or two, or a card that
+      // is there can have a stale field (most dangerously, stamps reading 0, which looks exactly like a
+      // real cash-in). Neither is trusted on a single read: a card seen this poll is trusted at once, a
+      // card that drops to 0 stamps has to repeat that on the *next* poll before it's believed, and a
+      // card missing entirely keeps showing its last known data for one more poll before it's actually
+      // removed. A genuine cash-in or a genuinely closed card still disappears — just one poll later,
+      // not on a single flaky read.
+      const seenThisPoll = new Set<string>();
+      const stable: CardWithBusiness[] = [];
+
+      for (const card of withBusinessInfo) {
         const key = card.cardAddress;
-        const lastTrusted = stableStampsRef.current.get(key);
-        if (card.stamps > 0 || lastTrusted === undefined || lastTrusted === 0) {
-          stableStampsRef.current.set(key, card.stamps);
-          pendingZeroRef.current.delete(key);
-          return card;
+        seenThisPoll.add(key);
+        missingStreakRef.current.delete(key);
+
+        const last = stableCardsRef.current.get(key);
+        if (card.stamps === 0 && last && last.stamps > 0 && !pendingZeroRef.current.has(key)) {
+          pendingZeroRef.current.add(key);
+          stable.push(last);
+          continue;
         }
-        if (pendingZeroRef.current.has(key)) {
-          // Read as zero on two polls in a row now — this is a real cash-in, not a flaky read.
-          stableStampsRef.current.set(key, 0);
+        pendingZeroRef.current.delete(key);
+        stableCardsRef.current.set(key, card);
+        stable.push(card);
+      }
+
+      for (const [key, last] of stableCardsRef.current) {
+        if (seenThisPoll.has(key)) continue;
+        const streak = (missingStreakRef.current.get(key) ?? 0) + 1;
+        if (streak < 2) {
+          missingStreakRef.current.set(key, streak);
+          stable.push(last);
+        } else {
+          stableCardsRef.current.delete(key);
+          missingStreakRef.current.delete(key);
           pendingZeroRef.current.delete(key);
-          return card;
         }
-        pendingZeroRef.current.add(key);
-        return { ...card, stamps: lastTrusted };
-      });
+      }
 
       // Whether each card's NFT is in the wallet. If the lookup fails the cards still show, just without the
       // NFT line.
@@ -157,6 +177,10 @@ export function MyCards({
       const withNfts = stable.map((c, i) =>
         nfts[i] ? { ...c, cardNft: { mint: nfts[i].mint.toBase58(), held: nfts[i].held } } : c
       );
+
+      // Carry the NFT info forward too, so a card kept on screen through a missing-this-poll grace
+      // period (above) still shows the right "in your wallet" state next time, not a blank one.
+      withNfts.forEach((c) => stableCardsRef.current.set(c.cardAddress, c));
 
       setCards(withNfts);
       onLoaded?.(withNfts.length);

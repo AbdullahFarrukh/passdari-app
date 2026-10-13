@@ -303,7 +303,7 @@ export default function CustomerPage() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 px-4 py-8 text-charcoal">
+    <div className="flex flex-col items-center gap-6 px-4 py-8 text-ink-soft">
       {!keypair && (
         <AuthPanel
           role="customer"

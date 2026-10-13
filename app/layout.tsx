@@ -29,8 +29,10 @@ export const metadata: Metadata = {
   description: "Loyalty stamp cards and rewards on Solana, owned by the customer",
 };
 
-// Sets `data-theme="dark"` on <html> before the browser paints anything, so a dark-mode visitor never
-// sees a flash of the light theme while the page loads. Has to be a literal inline script, not a module
+// Dark is the default for everyone: <html> is rendered with data-theme="dark", and this script only
+// switches it off for a visitor who has chosen light with the toggle (saved in localStorage). The device's
+// own light/dark setting is deliberately not consulted. Running before the first paint means a light-mode
+// visitor never sees a flash of dark either. Has to be a literal inline script, not a module
 // that imports THEME_STORAGE_KEY from lib/theme.ts — by the time any imported code could run, the first
 // frame may already be painted. Keep this copy of the key in sync with lib/theme.ts by hand.
 //
@@ -39,12 +41,13 @@ export const metadata: Metadata = {
 // once while parsing. next/script's `beforeInteractive` strategy is Next's own mechanism for exactly
 // this: Next hoists it into the real document <head> and runs it ahead of hydration, wherever in the
 // tree the <Script> component itself sits.
-const THEME_INIT_SCRIPT = `(function(){try{var t,s=localStorage.getItem("passdari-theme");if(s==="light"||s==="dark"){t=s}else{t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}if(t==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();`;
+const THEME_INIT_SCRIPT = `(function(){try{var s=localStorage.getItem("passdari-theme");if(s==="light")document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme","dark")}catch(e){}})();`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-theme="dark"
       className={`${display.variable} ${mono.variable} ${body.variable} h-full antialiased`}
       // The script above sets data-theme on this element before React hydrates, which would otherwise
       // make React warn about a server/client mismatch on an attribute it does not itself control.

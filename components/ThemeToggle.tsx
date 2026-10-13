@@ -20,14 +20,14 @@ function MoonIcon() {
 }
 
 export function ThemeToggle() {
-  // Starts as "light" on every render pass that matters for hydration — the server has no way to know
-  // localStorage, so its HTML always shows the light-mode icon/labels. Reading the live DOM (which the
+  // Starts as "dark" on every render pass that matters for hydration — the server has no way to know
+  // localStorage, so its HTML always shows the dark-mode icon/labels (dark is the default theme). Reading the live DOM (which the
   // inline init script in layout.tsx has, by this point, already corrected) directly in this component's
   // first render would make that first render *correct* but *different* from the static HTML the server
   // sent, which is exactly what React's hydration check flags as an error — it compares against the
   // server's output, not against what's actually true. The useEffect below corrects it immediately after
   // mount instead, a separate render pass that hydration doesn't compare against anything.
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
     // One of the genuine exceptions to this lint rule: synchronising with a DOM attribute React does

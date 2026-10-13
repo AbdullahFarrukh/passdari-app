@@ -20,7 +20,7 @@ export function MnemonicNotice({ phrase, onDismiss }: { phrase: string; onDismis
       </p>
       <ol className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
         {words.map((w, i) => (
-          <li key={i} className="flex items-baseline gap-2 rounded-lg border-2 border-ink px-2.5 py-2 font-mono text-sm">
+          <li key={i} className="flex items-baseline gap-2 rounded-lg border-2 border-ink px-2.5 py-2 font-mono text-sm text-ink-soft">
             <span className="w-4 text-right text-[10px] text-muted">{i + 1}</span>{w}
           </li>
         ))}

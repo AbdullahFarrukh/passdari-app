@@ -35,6 +35,10 @@
   --accent-cyan: #1B39FF;
   --charcoal: #111111;
   --muted: #4A4A44;
+  /* Text for data the reader has to copy or check (addresses, recovery words): the same near-black as
+     --ink in light mode, a softer bluish grey in dark mode so it stays readable without the bright
+     white of the headings. */
+  --ink-soft: #111111;
   --verified: #146C2E;
   --quiet-green: #0F5424;
   --card-shadow: 0 10px 24px rgba(17, 17, 17, .16), 0 2px 4px rgba(17, 17, 17, .12);
@@ -56,6 +60,7 @@
   --accent-cyan: #5EE7FF;
   --charcoal: #0A0C10;
   --muted: #8A93A6;
+  --ink-soft: #C2C9D8;
   --verified: #35D68C;
   --quiet-green: #146C2E;
   /* A shadow at the light theme's opacity all but disappears under a dark card on a near-black ground. */
@@ -78,6 +83,7 @@
   --color-accent-cyan: var(--accent-cyan);
   --color-charcoal: var(--charcoal);
   --color-muted: var(--muted);
+  --color-ink-soft: var(--ink-soft);
   --color-verified: var(--verified);
   --color-quiet-green: var(--quiet-green);
   --font-sans: var(--font-body);

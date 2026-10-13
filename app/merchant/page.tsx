@@ -123,7 +123,7 @@ export default function MerchantPage() {
 
 
   return (
-    <div className="text-charcoal flex flex-col items-center py-8 px-4 gap-6">
+    <div className="text-ink-soft flex flex-col items-center py-8 px-4 gap-6">
       {!keypair && (
         <AuthPanel
           role="merchant"
@@ -146,7 +146,7 @@ export default function MerchantPage() {
       {newMnemonic && <MnemonicNotice phrase={newMnemonic} onDismiss={() => setNewMnemonic(null)} />}
 
       {keypair && myBusiness === "checking" && (
-        <p className="text-sm text-charcoal/60 font-mono">Checking your account…</p>
+        <p className="text-sm text-muted font-mono">Checking your account…</p>
       )}
 
               {keypair && myBusiness === null && (
